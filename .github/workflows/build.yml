@@ -1,0 +1,126 @@
+name: Build RPMs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: Space-separated packages to build, or "all"
+        default: all
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.packages.outputs.packages }}
+      chroot: ${{ steps.chroot.outputs.chroot }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # A package is a top-level directory holding <name>/<name>.spec
+      - id: packages
+        env:
+          REQUESTED: ${{ inputs.packages }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          all=$(for spec in */*.spec; do dirname "$spec"; done | sort -u)
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$REQUESTED" = all ]; then
+              selected=$all
+            else
+              selected=$REQUESTED
+            fi
+          elif [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            selected=$all
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(\.copr|\.github)/'; then
+            selected=$all
+          else
+            changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA" | cut -d/ -f1 | sort -u)
+            selected=$(comm -12 <(echo "$all") <(echo "$changed"))
+          fi
+          echo "packages=$(echo $selected | jq -Rc 'split(" ") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
+
+      # The mock chroot for the latest stable Fedora, named as COPR names it
+      - id: chroot
+        run: |
+          release=$(docker run --rm registry.fedoraproject.org/fedora:latest rpm -E %fedora)
+          echo "chroot=fedora-$release-x86_64" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.plan.outputs.packages) }}
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: dnf -y install mock rpmdevtools rpm-build cargo make
+
+      # Same entry point COPR's make_srpm method uses
+      - name: Build SRPM
+        run: make -f .copr/Makefile srpm outdir=srpm spec=${{ matrix.package }}/${{ matrix.package }}.spec
+
+      - name: Build RPMs
+        run: |
+          mock -r ${{ needs.plan.outputs.chroot }} --isolation=simple \
+            --rebuild srpm/*.src.rpm --resultdir results
+
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.package }}
+          path: results/*.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpms-${{ matrix.package }}
+          path: results/*.rpm
+
+  publish:
+    needs: [plan, build]
+    # Publish whatever built, even if some packages in the matrix failed
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'failure')
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    steps:
+      - name: Install tools
+        run: dnf -y install git createrepo_c dnf5-plugins
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: rpms-*
+          merge-multiple: true
+          path: new
+
+      - name: Update repository
+        env:
+          CHROOT: ${{ needs.plan.outputs.chroot }}
+          REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        # The container runs as root but the checkout is owned by the runner
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          .github/scripts/publish.sh new
+

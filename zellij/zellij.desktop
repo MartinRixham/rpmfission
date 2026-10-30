@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zellij
+GenericName=Terminal Multiplexer
+Comment=Zellij terminal workspace
+Exec=foot -F --app-id=zellij --font="Droid Sans Mono:size=11" zellij
+Icon=zellij
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;multiplexer;zellij;
+StartupWMClass=zellij
