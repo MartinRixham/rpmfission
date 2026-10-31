@@ -25,7 +25,7 @@
 
 Name:           mesa-freeworld
 Version:        26.2.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Mesa VA-API drivers with all video codecs
 
 License:        MIT AND BSD-3-Clause AND SGI-B-2.0
@@ -106,6 +106,9 @@ Summary:        Mesa VA-API drivers with all video codecs
 Requires:       mesa-filesystem%{?_isa} = %{version}
 Provides:       mesa-va-drivers = %{version}-%{release}
 Provides:       mesa-va-drivers%{?_isa} = %{version}-%{release}
+
+Requires(posttrans): coreutils
+Requires(postun): coreutils
 
 %description -n mesa-va-drivers-freeworld
 Mesa's VA-API drivers for AMD (radeonsi, r600), nouveau, virtio-gpu and d3d12
@@ -189,6 +192,17 @@ fi
 
 %ldconfig_scriptlets -n mesa-va-drivers-freeworld
 
+# GStreamer's va plugin registers decoders for the VA-API driver it finds when
+# it is scanned, and rescans only when the plugin's file changes. Touch it so
+# every user's registry picks up these drivers' H.264 and H.265, or drops them.
+%posttrans -n mesa-va-drivers-freeworld
+touch -c %{_libdir}/gstreamer-1.0/libgstva.so || :
+
+%postun -n mesa-va-drivers-freeworld
+if [ $1 -eq 0 ]; then
+    touch -c %{_libdir}/gstreamer-1.0/libgstva.so || :
+fi
+
 %files -n mesa-va-drivers-freeworld
 %license docs/license.rst
 %config %{_sysconfdir}/ld.so.conf.d/%{name}-%{_lib}.conf
@@ -200,5 +214,8 @@ fi
 %{_libdir}/dri-freeworld/virtio_gpu_drv_video.so
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.5-2
+- Make GStreamer rescan its va plugin when the drivers are installed or removed
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.5-1
 - Initial package

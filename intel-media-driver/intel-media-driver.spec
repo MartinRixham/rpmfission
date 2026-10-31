@@ -9,7 +9,7 @@
 
 Name:           intel-media-driver
 Version:        26.3.5
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Intel Media Driver for VA-API, with all kernels
 
 # The driver is MIT; the VP8/VP9 code from libvpx is BSD-3-Clause
@@ -35,6 +35,9 @@ BuildRequires:  pkgconfig(x11)
 # Bundles a modified libdrm and the archived cmrt (C for Media runtime)
 Provides:       bundled(libdrm)
 Provides:       bundled(libcmrt)
+
+Requires(posttrans): coreutils
+Requires(postun): coreutils
 
 %description
 The Intel Media Driver for VAAPI (iHD) is a VA-API user mode driver for
@@ -64,11 +67,25 @@ if grep -q -- '-Werror"' media_driver/media_top_cmake.cmake; then exit 1; fi
 %cmake_install
 mv %{buildroot}%{_libdir}/dri %{buildroot}%{_libdir}/dri-nonfree
 
+# GStreamer's va plugin registers decoders for the VA-API driver it finds when
+# it is scanned, and rescans only when the plugin's file changes. Touch it so
+# every user's registry picks up this driver, or drops it.
+%posttrans
+touch -c %{_libdir}/gstreamer-1.0/libgstva.so || :
+
+%postun
+if [ $1 -eq 0 ]; then
+    touch -c %{_libdir}/gstreamer-1.0/libgstva.so || :
+fi
+
 %files
 %license LICENSE.md
 %doc README.md
 %{_libdir}/dri-nonfree/iHD_drv_video.so
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.3.5-2
+- Make GStreamer rescan its va plugin when the driver is installed or removed
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.3.5-1
 - Initial package

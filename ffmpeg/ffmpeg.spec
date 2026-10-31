@@ -23,7 +23,7 @@
 
 Name:           ffmpeg
 Version:        8.1.3
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -203,6 +203,9 @@ Obsoletes:      libavcodec-freeworld < %{version}-%{release}
 # noopenh264 is a stub; the real library is in the fedora-cisco-openh264
 # repository.
 Suggests:       openh264%{?_isa}
+
+Requires(posttrans): coreutils
+Requires(postun): coreutils
 
 %description    libs
 The FFmpeg libraries: libavcodec (codecs), libavformat (containers and
@@ -432,6 +435,17 @@ for codec in libx264 libx265; do
         -i out-$codec.mkv -f null -
 done
 
+# GStreamer caches the codecs each plugin registers and rescans a plugin only
+# when the plugin's file changes, so gst-libav keeps the codec list of the
+# FFmpeg it was first scanned with. Touch it so every user's registry rescans.
+%posttrans libs
+touch -c %{_libdir}/gstreamer-1.0/libgstlibav.so || :
+
+%postun libs
+if [ $1 -eq 0 ]; then
+    touch -c %{_libdir}/gstreamer-1.0/libgstlibav.so || :
+fi
+
 %files
 %doc CREDITS README.md
 %{_bindir}/ffmpeg
@@ -464,6 +478,9 @@ done
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-3
+- Make GStreamer rescan gst-libav when the libraries are installed or removed
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-2
 - Build for aarch64 (Fedora Asahi Remix), without libvmaf and Quick Sync
   Video, which Fedora has for x86_64 only
