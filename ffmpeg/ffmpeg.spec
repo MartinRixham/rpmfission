@@ -23,7 +23,7 @@
 
 Name:           ffmpeg
 Version:        8.1.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -119,7 +119,10 @@ BuildRequires:  pkgconfig(libv4l2)
 BuildRequires:  pkgconfig(libva)
 BuildRequires:  pkgconfig(libva-drm)
 BuildRequires:  pkgconfig(libva-x11)
+%ifarch x86_64
+# Fedora builds libvmaf for x86_64 only
 BuildRequires:  pkgconfig(libvmaf)
+%endif
 BuildRequires:  pkgconfig(libwebp)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(libzmq)
@@ -150,7 +153,10 @@ BuildRequires:  pkgconfig(vdpau)
 BuildRequires:  pkgconfig(vidstab)
 BuildRequires:  pkgconfig(vo-amrwbenc)
 BuildRequires:  pkgconfig(vorbis)
+%ifarch x86_64
+# Intel Quick Sync Video; Fedora builds oneVPL for x86_64 only
 BuildRequires:  pkgconfig(vpl) >= 2.6
+%endif
 BuildRequires:  pkgconfig(vpx)
 BuildRequires:  pkgconfig(vulkan) >= 1.3.255
 BuildRequires:  pkgconfig(wavpack)
@@ -336,10 +342,14 @@ cp -a doc/examples/{*.c,Makefile,README} _doc/examples/
     --enable-libtwolame \
     --enable-libv4l2 \
     --enable-libvidstab \
+%ifarch x86_64
     --enable-libvmaf \
+%endif
     --enable-libvo-amrwbenc \
     --enable-libvorbis \
+%ifarch x86_64
     --enable-libvpl \
+%endif
     --enable-libvpx \
     --enable-libwebp \
     --enable-libx264 \
@@ -381,18 +391,23 @@ cp -a doc/examples/{*.c,Makefile,README} _doc/examples/
     || { cat ffbuild/config.log; exit 1; }
 
 # configure skips a requested hardware API whose dependencies it cannot
-# find, rather than failing
-for config in AMF CUDA_LLVM CUVID FFNVCODEC NVDEC NVENC LIBVPL VAAPI VDPAU VULKAN OPENCL; do
+# find, rather than failing. Intel Quick Sync Video (oneVPL) is x86_64 only.
+configs="AMF CUDA_LLVM CUVID FFNVCODEC NVDEC NVENC VAAPI VDPAU VULKAN OPENCL"
+codecs="H264_DECODER HEVC_DECODER VC1_DECODER VVC_DECODER
+        LIBX264_ENCODER LIBX265_ENCODER
+        H264_VAAPI_ENCODER HEVC_VAAPI_ENCODER AV1_VAAPI_ENCODER
+        H264_NVENC_ENCODER HEVC_NVENC_ENCODER AV1_NVENC_ENCODER
+        H264_AMF_ENCODER HEVC_AMF_ENCODER H264_VULKAN_ENCODER
+        H264_VAAPI_HWACCEL HEVC_VAAPI_HWACCEL AV1_VAAPI_HWACCEL
+        H264_VULKAN_HWACCEL HEVC_NVDEC_HWACCEL"
+%ifarch x86_64
+configs="$configs LIBVPL"
+codecs="$codecs H264_QSV_ENCODER HEVC_QSV_ENCODER AV1_QSV_ENCODER"
+%endif
+for config in $configs; do
     grep -q "^#define CONFIG_${config} 1" config.h
 done
-for codec in H264_DECODER HEVC_DECODER VC1_DECODER VVC_DECODER \
-             LIBX264_ENCODER LIBX265_ENCODER \
-             H264_VAAPI_ENCODER HEVC_VAAPI_ENCODER AV1_VAAPI_ENCODER \
-             H264_QSV_ENCODER HEVC_QSV_ENCODER AV1_QSV_ENCODER \
-             H264_NVENC_ENCODER HEVC_NVENC_ENCODER AV1_NVENC_ENCODER \
-             H264_AMF_ENCODER HEVC_AMF_ENCODER H264_VULKAN_ENCODER \
-             H264_VAAPI_HWACCEL HEVC_VAAPI_HWACCEL AV1_VAAPI_HWACCEL \
-             H264_VULKAN_HWACCEL HEVC_NVDEC_HWACCEL; do
+for codec in $codecs; do
     grep -q "^#define CONFIG_${codec} 1" config_components.h
 done
 
@@ -449,5 +464,9 @@ done
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-2
+- Build for aarch64 (Fedora Asahi Remix), without libvmaf and Quick Sync
+  Video, which Fedora has for x86_64 only
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-1
 - Initial package

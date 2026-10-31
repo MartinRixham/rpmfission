@@ -20,7 +20,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # A native runner for each architecture: mock cannot cross-build, and
+    # emulation is too slow for FFmpeg
+    runs-on: ${{ endsWith(matrix.chroot, '-aarch64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:

@@ -18,14 +18,24 @@ env:
   # remove it when it goes end of life; its chroot is then deleted from the
   # published repository on the next publish.
   FEDORA_RELEASES: '[44]'
+  # Architectures to build for, each on a runner of its own architecture (see
+  # build-rpms.yml). aarch64 is also the repository for Fedora Asahi Remix.
+  FEDORA_ARCHES: '["x86_64", "aarch64"]'
 
 jobs:
   plan:
     runs-on: ubuntu-latest
+    # For rpmspec, to read each package's architectures
+    container:
+      image: registry.fedoraproject.org/fedora:latest
     outputs:
       builds: ${{ steps.builds.outputs.builds }}
       builds-with-repo: ${{ steps.builds.outputs.builds-with-repo }}
     steps:
+      # git before checkout, or it downloads the tree without history
+      - name: Install tools
+        run: dnf -y install git jq rpm-build rust-srpm-macros
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -33,7 +43,9 @@ jobs:
       # A package is a top-level directory holding <name>/<name>.spec.
       # Each build is one package in one mock chroot (named as COPR names it).
       # A chroot not yet on gh-pages, such as a newly added release, gets
-      # every package.
+      # every package. A package is left out of chroots whose architecture
+      # its ExclusiveArch or ExcludeArch rules out, as COPR does; noarch
+      # packages build in every chroot.
       #
       # Packages with a BuildRequires on another package of this repository
       # (<pkg>, <pkg>-devel, <pkg>-libs or <pkg>-static) build in a second
@@ -44,6 +56,8 @@ jobs:
           REQUESTED: ${{ inputs.packages }}
           BEFORE: ${{ github.event.before }}
         run: |
+          # The container runs as root but the checkout is owned by the runner
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           all=$(for spec in */*.spec; do dirname "$spec"; done | sort -u)
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             if [ "$REQUESTED" = all ]; then
@@ -65,22 +79,38 @@ jobs:
               sed -E 's/-(devel|libs|static)$//' | sort -u | comm -12 - <(echo "$all")
           }
 
+          builds_for() {
+            local arch=$1 package exclusive exclude
+            shift
+            for package; do
+              exclusive=$(rpmspec -q --srpm --qf '[%{EXCLUSIVEARCH} ]' "$package/$package.spec")
+              exclude=$(rpmspec -q --srpm --qf '[%{EXCLUDEARCH} ]' "$package/$package.spec")
+              if [ -n "$exclusive" ] && ! grep -qw -- "$arch" <<< "$exclusive"; then
+                continue
+              fi
+              grep -qw -- "$arch" <<< "$exclude" && continue
+              echo "$package"
+            done
+          }
+
           builds=$(
             for release in $(jq -r '.[]' <<< "$FEDORA_RELEASES"); do
-              chroot=fedora-$release-x86_64
+            for arch in $(jq -r '.[]' <<< "$FEDORA_ARCHES"); do
+              chroot=fedora-$release-$arch
               if git rev-parse -q --verify origin/gh-pages > /dev/null &&
                  [ -n "$(git ls-tree -d origin/gh-pages -- "$chroot")" ]; then
                 packages=$selected
               else
                 packages=$all
               fi
-              for package in $packages; do
+              for package in $(builds_for "$arch" $packages); do
                 with_repo=false
                 [ -n "$(repo_deps "$package")" ] && with_repo=true
                 jq -nc --arg package "$package" --arg chroot "$chroot" \
                   --argjson with_repo "$with_repo" \
                   '{package: $package, chroot: $chroot, with_repo: $with_repo}'
               done
+            done
             done | jq -sc .
           )
           echo "builds=$(jq -c 'map(select(.with_repo | not) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"

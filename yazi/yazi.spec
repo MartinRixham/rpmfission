@@ -3,7 +3,7 @@
 
 Name:           yazi
 Version:        26.9.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Terminal file manager based on async I/O
 
 # Yazi itself is MIT, and so are its bundled icons (LICENSE-ICONS). The rest
@@ -84,6 +84,12 @@ if grep -q '^default.*vendored-lua' yazi-*/Cargo.toml; then exit 1; fi
 export YAZI_GEN_COMPLETIONS=1
 export YAZI_NO_GITCL=1
 export RUSTONIG_SYSTEM_LIBONIG=1
+%ifarch aarch64
+# jemalloc otherwise takes the build host's 4K page size and aborts on
+# kernels with larger pages, such as Asahi Linux's 16K. 64K pages work on
+# all of them, as in Fedora's jemalloc.
+export JEMALLOC_SYS_WITH_LG_PAGE=16
+%endif
 %cargo_build
 %{cargo_license_summary}
 %{cargo_license} > LICENSE.dependencies
@@ -123,6 +129,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/yazi.desktop
 %{_datadir}/pixmaps/yazi.png
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-3
+- Build jemalloc for 64K pages on aarch64, so yazi runs on Asahi Linux's
+  16K page kernel
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-2
 - Use the Droid Sans Mono Nerd Font in the desktop entry, for the file icons
 

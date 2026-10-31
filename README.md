@@ -1,7 +1,8 @@
 # RPMFission
 
 Source builds of software packaged as RPMs for the supported Fedora
-releases. They are built on GitHub Actions and served as a dnf repository from
+releases, on x86_64 and aarch64. The aarch64 builds also serve Fedora Asahi
+Remix on Apple Silicon Macs. They are built on GitHub Actions and served as a dnf repository from
 GitHub Pages.
 
 ## Using the repository
@@ -13,6 +14,11 @@ sudo dnf install zellij
 
 Packages are not signed yet (`gpgcheck=0`).
 
+On Fedora Asahi Remix the same commands work: the Remix is Fedora's aarch64
+release, so dnf picks the `fedora-$releasever-aarch64` repository. Its 16K
+page kernel needs nothing special from these packages, except yazi's jemalloc,
+which is built for pages of up to 64K.
+
 The repository has priority 90, ahead of the default 99. Where another
 repository, such as RPM Fusion, has a package of the same name, dnf takes this
 repository's. Its metadata expires after 6 hours, so dnf sees new builds the
@@ -20,6 +26,10 @@ same day. If you added the repository before these were set, add it again with
 `--overwrite`.
 
 ## Packages
+
+`intel-media-driver`, `mesa-freeworld` and `video-drivers` are x86_64 only.
+On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video, which Fedora
+builds for x86_64 only.
 
 | Package | Upstream |
 | ------- | -------- |
@@ -82,7 +92,10 @@ without changes:
   them against `sources`, runs the hook and builds the SRPM.
 
 CI does what COPR does: it builds the SRPM through `.copr/Makefile`, then
-rebuilds it with `mock` in the `fedora-<release>-x86_64` chroot. The network is
+rebuilds it with `mock` in the `fedora-<release>-<arch>` chroot, on a GitHub
+runner of that architecture (`ubuntu-24.04-arm` for aarch64). A package whose
+`ExclusiveArch` or `ExcludeArch` rules out an architecture is not built
+for it. The network is
 off during the RPM build. The published repository uses COPR's per-chroot
 layout (`fedora-$releasever-$basearch/`).
 
@@ -92,6 +105,9 @@ layout (`fedora-$releasever-$basearch/`).
 make -f .copr/Makefile srpm outdir=out spec=zellij/zellij.spec
 mock -r fedora-44-x86_64 --rebuild out/*.src.rpm
 ```
+
+Use `fedora-44-aarch64` on an aarch64 machine. mock can build it on x86_64
+through `qemu-user-static`, but slowly.
 
 ## CI
 

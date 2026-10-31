@@ -11,6 +11,8 @@ Summary:        Hardware video acceleration drivers for Intel, AMD and NVIDIA GP
 License:        MIT
 
 BuildArch:      noarch
+# The drivers are for x86_64 PCs; Apple Silicon (Asahi) has no VA-API driver
+ExclusiveArch:  x86_64
 
 Requires:       %{name}-intel = %{version}-%{release}
 Requires:       %{name}-amd = %{version}-%{release}
