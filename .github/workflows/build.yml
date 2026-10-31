@@ -116,8 +116,11 @@ jobs:
 
   publish:
     needs: [plan, build]
-    # Publish whatever built, even if some packages in the matrix failed
-    if: always() && (needs.build.result == 'success' || needs.build.result == 'failure')
+    # Publish whatever built, even if some packages in the matrix failed.
+    # Only main publishes; other branches, such as update PRs, only build.
+    if: >-
+      always() && github.ref == 'refs/heads/main' &&
+      (needs.build.result == 'success' || needs.build.result == 'failure')
     runs-on: ubuntu-latest
     container:
       image: registry.fedoraproject.org/fedora:latest

@@ -1,0 +1,47 @@
+name: Check upstream releases
+
+# Opens a pull request for each package whose upstream GitHub repository has a
+# newer release. See .github/scripts/check-updates.sh.
+#
+# Requires "Allow GitHub Actions to create and approve pull requests" in the
+# repository's Actions settings.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+    permissions:
+      contents: write
+      pull-requests: write
+      # To run the build workflow on the update branch
+      actions: write
+    steps:
+      - name: Install tools
+        run: dnf -y install git gh rpmdevtools rpm-build cargo-rpm-macros
+
+      - uses: actions/checkout@v7
+
+      - name: Open update pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        # The container runs as root but the checkout is owned by the runner
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global user.name "$GIT_AUTHOR_NAME"
+          git config --global user.email "$GIT_AUTHOR_EMAIL"
+          .github/scripts/check-updates.sh

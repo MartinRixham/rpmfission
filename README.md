@@ -64,4 +64,24 @@ mock -r fedora-44-x86_64 --rebuild out/*.src.rpm
   SRPMs and debuginfo packages are too large for git. They are kept only as
   workflow artifacts, along with the mock logs.
 
-GitHub Pages must be set to deploy from the `gh-pages` branch.
+- Only `main` publishes. Builds of other branches keep their RPMs as
+  workflow artifacts.
+
+## Upstream updates
+
+A daily workflow (`.github/workflows/update.yml`) checks the upstream GitHub
+repository of each package, the first `github.com/<owner>/<repo>` in the
+spec's `URL` or `Source` fields. When the latest release (not a draft or
+pre-release) is newer than the spec's `Version`, it opens a pull request on
+`update/<name>-<version>`. The PR bumps `Version`, resets `Release`, adds a
+changelog entry and refreshes `sources`, and the build workflow runs on its
+branch. Patches, `License:` and anything else the release changes are left to
+review. A version whose branch already exists is not offered again, so to skip
+a release, close its PR and keep the branch. Packages with no GitHub releases,
+such as tui-torrent, are skipped.
+
+## Repository settings
+
+- GitHub Pages must deploy from the `gh-pages` branch.
+- Actions must be allowed to create pull requests (Settings → Actions →
+  General → "Allow GitHub Actions to create and approve pull requests").
