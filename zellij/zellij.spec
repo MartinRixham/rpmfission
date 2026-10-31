@@ -3,7 +3,7 @@
 
 Name:           zellij
 Version:        0.45.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -27,6 +27,7 @@ BuildRequires:  cargo-rpm-macros >= 26
 BuildRequires:  rust-std-static-wasm32-wasip1
 BuildRequires:  pkgconfig(libcurl)
 BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(zlib)
 BuildRequires:  desktop-file-utils
 
@@ -65,7 +66,10 @@ for dir in default-plugins/*/; do
 done
 
 # vendored_curl is dropped from the defaults to link the system libcurl and
-# openssl
+# openssl. rusqlite turns on libsqlite3-sys's bundled SQLite; the variable
+# makes it link the system library instead, without editing Cargo.toml (which
+# would change Cargo.lock).
+export LIBSQLITE3_SYS_USE_PKG_CONFIG=1
 %cargo_build -n -f web_server_capability
 %{cargo_license_summary -n -f web_server_capability}
 %{cargo_license -n -f web_server_capability} > LICENSE.dependencies
@@ -98,5 +102,8 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zellij.svg
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-2
+- Link the system SQLite instead of the bundled copy
+
 * Fri Oct 30 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-1
 - Initial package
