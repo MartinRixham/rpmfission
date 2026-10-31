@@ -15,8 +15,9 @@ Packages are not signed yet (`gpgcheck=0`).
 
 The repository has priority 90, ahead of the default 99. Where another
 repository, such as RPM Fusion, has a package of the same name, dnf takes this
-repository's. If you added the repository before the priority was set, add it
-again with `--overwrite`.
+repository's. Its metadata expires after 6 hours, so dnf sees new builds the
+same day. If you added the repository before these were set, add it again with
+`--overwrite`.
 
 ## Packages
 
