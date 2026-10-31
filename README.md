@@ -17,6 +17,7 @@ Packages are not signed yet (`gpgcheck=0`).
 
 | Package | Upstream |
 | ------- | -------- |
+| [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [yazi](yazi/yazi.spec) | https://github.com/sxyazi/yazi |
 | [zellij](zellij/zellij.spec) | https://github.com/zellij-org/zellij |
