@@ -13,19 +13,27 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Fedora releases to build for. Add a release when it branches or ships, and
+  # remove it when it goes end of life; its chroot is then deleted from the
+  # published repository on the next publish.
+  FEDORA_RELEASES: '[44]'
+
 jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      packages: ${{ steps.packages.outputs.packages }}
-      chroot: ${{ steps.chroot.outputs.chroot }}
+      builds: ${{ steps.builds.outputs.builds }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # A package is a top-level directory holding <name>/<name>.spec
-      - id: packages
+      # A package is a top-level directory holding <name>/<name>.spec.
+      # Each build is one package in one mock chroot (named as COPR names it).
+      # A chroot not yet on gh-pages, such as a newly added release, gets
+      # every package.
+      - id: builds
         env:
           REQUESTED: ${{ inputs.packages }}
           BEFORE: ${{ github.event.before }}
@@ -45,22 +53,32 @@ jobs:
             changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA" | cut -d/ -f1 | sort -u)
             selected=$(comm -12 <(echo "$all") <(echo "$changed"))
           fi
-          echo "packages=$(echo $selected | jq -Rc 'split(" ") | map(select(. != ""))')" >> "$GITHUB_OUTPUT"
 
-      # The mock chroot for the latest stable Fedora, named as COPR names it
-      - id: chroot
-        run: |
-          release=$(docker run --rm registry.fedoraproject.org/fedora:latest rpm -E %fedora)
-          echo "chroot=fedora-$release-x86_64" >> "$GITHUB_OUTPUT"
+          builds=$(
+            for release in $(jq -r '.[]' <<< "$FEDORA_RELEASES"); do
+              chroot=fedora-$release-x86_64
+              if git rev-parse -q --verify origin/gh-pages > /dev/null &&
+                 [ -n "$(git ls-tree -d origin/gh-pages -- "$chroot")" ]; then
+                packages=$selected
+              else
+                packages=$all
+              fi
+              for package in $packages; do
+                jq -nc --arg package "$package" --arg chroot "$chroot" \
+                  '{package: $package, chroot: $chroot}'
+              done
+            done | jq -sc .
+          )
+          echo "builds=$builds" >> "$GITHUB_OUTPUT"
 
   build:
     needs: plan
-    if: needs.plan.outputs.packages != '[]'
+    if: needs.plan.outputs.builds != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJSON(needs.plan.outputs.packages) }}
+        include: ${{ fromJSON(needs.plan.outputs.builds) }}
     container:
       image: registry.fedoraproject.org/fedora:latest
       options: --privileged
@@ -76,19 +94,25 @@ jobs:
 
       - name: Build RPMs
         run: |
-          mock -r ${{ needs.plan.outputs.chroot }} --isolation=simple \
+          mock -r ${{ matrix.chroot }} --isolation=simple \
             --rebuild srpm/*.src.rpm --resultdir results
+
+      # Staged under <chroot>/ so the publish job knows where each RPM goes
+      - name: Stage RPMs
+        run: |
+          mkdir -p rpms/${{ matrix.chroot }}
+          cp -p results/*.rpm rpms/${{ matrix.chroot }}/
 
       - if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: logs-${{ matrix.package }}
+          name: logs-${{ matrix.package }}-${{ matrix.chroot }}
           path: results/*.log
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rpms-${{ matrix.package }}
-          path: results/*.rpm
+          name: rpms-${{ matrix.package }}-${{ matrix.chroot }}
+          path: rpms/
 
   publish:
     needs: [plan, build]
@@ -104,7 +128,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Install tools
-        run: dnf -y install git createrepo_c dnf5-plugins
+        run: dnf -y install git createrepo_c dnf5-plugins jq
 
       - uses: actions/checkout@v7
 
@@ -116,7 +140,6 @@ jobs:
 
       - name: Update repository
         env:
-          CHROOT: ${{ needs.plan.outputs.chroot }}
           REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           REPO_NAME: ${{ github.event.repository.name }}
         # The container runs as root but the checkout is owned by the runner

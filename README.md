@@ -1,7 +1,7 @@
 # RPMFission
 
-Source builds of software packaged as RPMs for the latest stable Fedora
-release. They are built on GitHub Actions and served as a dnf repository from
+Source builds of software packaged as RPMs for the supported Fedora
+releases. They are built on GitHub Actions and served as a dnf repository from
 GitHub Pages.
 
 ## Using the repository
@@ -53,8 +53,12 @@ mock -r fedora-44-x86_64 --rebuild out/*.src.rpm
 
 - A push to `main` builds the packages whose directories changed. A change
   under `.copr/` or `.github/` rebuilds everything.
-- Running the workflow by hand builds the listed packages, or `all`. Do this
-  after a new Fedora release to fill its chroot.
+- Running the workflow by hand builds the listed packages, or `all`.
+- Every package is built for each Fedora release in `FEDORA_RELEASES` at the
+  top of `.github/workflows/build.yml`. A release whose chroot is not yet on
+  `gh-pages` gets every package. Add a release when it branches or ships, and
+  remove it at end of life. Its chroot is then deleted from `gh-pages` on the
+  next publish.
 - Built binary RPMs are added to the `gh-pages` branch. The two newest builds
   of each package are kept, and the branch is force-pushed as a single commit.
   SRPMs and debuginfo packages are too large for git. They are kept only as

@@ -3,7 +3,10 @@
 #
 #   publish.sh <dir-of-new-rpms>
 #
-# Environment: CHROOT (e.g. fedora-44-x86_64), REPO_URL, REPO_NAME.
+# The directory holds one subdirectory of RPMs per chroot, e.g.
+# fedora-44-x86_64/. Chroots of releases not in FEDORA_RELEASES are removed.
+#
+# Environment: FEDORA_RELEASES (JSON list, e.g. [44]), REPO_URL, REPO_NAME.
 #
 # The layout mirrors a COPR project, one repository per chroot:
 #   <REPO_URL>/<REPO_NAME>.repo
@@ -33,18 +36,35 @@ fi
 # debuginfo are too large to keep in git and remain available as workflow
 # artifacts.
 shopt -s nullglob extglob
-rpms=("$new"/!(*.src|*-debuginfo-*|*-debugsource-*).rpm)
-if [ ${#rpms[@]} -eq 0 ]; then
+published=0
+for dir in "$new"/fedora-*/; do
+    chroot=$(basename "$dir")
+    rpms=("$dir"!(*.src|*-debuginfo-*|*-debugsource-*).rpm)
+    [ ${#rpms[@]} -gt 0 ] || continue
+    mkdir -p "$site/$chroot"
+    cp -p "${rpms[@]}" "$site/$chroot/"
+    # Keep the newest $keep builds of each package so a bad one can be
+    # downgraded
+    dnf repomanage --old --keep "$keep" "$site/$chroot" | xargs -r rm -v
+    createrepo_c --update "$site/$chroot"
+    published=$((published + ${#rpms[@]}))
+done
+if [ "$published" -eq 0 ]; then
     echo "No RPMs to publish"
     exit 0
 fi
 
-mkdir -p "$site/$CHROOT"
-cp -p "${rpms[@]}" "$site/$CHROOT/"
-
-# Keep the newest $keep builds of each package so a bad one can be downgraded
-dnf repomanage --old --keep "$keep" "$site/$CHROOT" | xargs -r rm -v
-createrepo_c --update "$site/$CHROOT"
+# Drop chroots of releases that are no longer built (end of life)
+for dir in "$site"/fedora-*/; do
+    chroot=$(basename "$dir")
+    release=${chroot#fedora-}
+    release=${release%%-*}
+    if ! jq -e --arg r "$release" 'map(tostring) | index($r)' \
+            <<< "$FEDORA_RELEASES" > /dev/null; then
+        echo "Removing $chroot"
+        rm -rf "$dir"
+    fi
+done
 
 cat > "$site/$REPO_NAME.repo" <<EOF
 [$REPO_NAME]
