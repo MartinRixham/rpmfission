@@ -17,6 +17,7 @@ Packages are not signed yet (`gpgcheck=0`).
 
 | Package | Upstream |
 | ------- | -------- |
+| [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [zellij](zellij/zellij.spec) | https://github.com/zellij-org/zellij |
 
 ## Layout
