@@ -4,7 +4,7 @@ Type=Application
 Name=Zellij
 GenericName=Terminal Multiplexer
 Comment=Zellij terminal workspace
-Exec=foot -F --app-id=zellij --font="Droid Sans Mono:size=11" zellij
+Exec=foot -F --app-id=zellij --font="DroidSansM Nerd Font:size=11" zellij
 Icon=zellij
 Terminal=false
 Categories=System;TerminalEmulator;

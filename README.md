@@ -17,6 +17,7 @@ Packages are not signed yet (`gpgcheck=0`).
 
 | Package | Upstream |
 | ------- | -------- |
+| [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [yazi](yazi/yazi.spec) | https://github.com/sxyazi/yazi |

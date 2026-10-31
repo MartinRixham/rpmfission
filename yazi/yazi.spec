@@ -3,7 +3,7 @@
 
 Name:           yazi
 Version:        26.9.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Terminal file manager based on async I/O
 
 # Yazi itself is MIT, and so are its bundled icons (LICENSE-ICONS). The rest
@@ -31,7 +31,7 @@ BuildRequires:  desktop-file-utils
 
 # Used by the desktop entry
 Requires:       foot
-Requires:       google-droid-sans-mono-fonts
+Requires:       droid-sans-mono-nerd-fonts
 # Yazi detects MIME types with file(1)
 Requires:       file
 # Previews, search and clipboard; each feature is skipped when its tool is
@@ -123,6 +123,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/yazi.desktop
 %{_datadir}/pixmaps/yazi.png
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-2
+- Use the Droid Sans Mono Nerd Font in the desktop entry, for the file icons
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-1
 - Initial package
 - Build against the system Lua 5.4 instead of a bundled Lua 5.5

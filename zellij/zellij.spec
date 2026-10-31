@@ -3,7 +3,7 @@
 
 Name:           zellij
 Version:        0.45.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -33,7 +33,7 @@ BuildRequires:  desktop-file-utils
 
 # Used by the desktop entry
 Requires:       foot
-Requires:       google-droid-sans-mono-fonts
+Requires:       droid-sans-mono-nerd-fonts
 
 %description
 Zellij is a workspace aimed at developers, ops-oriented people and anyone who
@@ -102,6 +102,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zellij.svg
 
 %changelog
+* Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-3
+- Use the Droid Sans Mono Nerd Font in the desktop entry, for the status bar
+  arrows
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-2
 - Link the system SQLite instead of the bundled copy
 
