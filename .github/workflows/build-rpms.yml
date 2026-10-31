@@ -1,0 +1,86 @@
+name: Build RPMs (stage)
+
+# One stage of build.yml: builds each {package, chroot} of the matrix the same
+# way COPR does, and uploads the RPMs and logs as artifacts.
+
+on:
+  workflow_call:
+    inputs:
+      builds:
+        description: JSON list of {package, chroot}
+        required: true
+        type: string
+      with-repo:
+        description: >-
+          Make the RPMs of earlier stages of this run, and the published
+          repository, available to the build (for packages that build against
+          others in this repository)
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.builds) }}
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c
+
+      # Same entry point COPR's make_srpm method uses
+      - name: Build SRPM
+        run: make -f .copr/Makefile srpm outdir=srpm spec=${{ matrix.package }}/${{ matrix.package }}.spec
+
+      - if: inputs.with-repo
+        uses: actions/download-artifact@v7
+        with:
+          pattern: rpms-*
+          merge-multiple: true
+          path: earlier
+
+      # RPMs built earlier in this run come first; the published repository
+      # supplies the rest
+      - name: Add repositories
+        if: inputs.with-repo
+        env:
+          CHROOT: ${{ matrix.chroot }}
+          PUBLISHED: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ matrix.chroot }}/
+        run: |
+          repos=()
+          if ls earlier/"$CHROOT"/*.rpm > /dev/null 2>&1; then
+            createrepo_c earlier/"$CHROOT"
+            repos+=("--addrepo=$PWD/earlier/$CHROOT")
+          fi
+          if curl -sfo /dev/null "${PUBLISHED}repodata/repomd.xml"; then
+            repos+=("--addrepo=$PUBLISHED")
+          fi
+          echo "MOCK_REPOS=${repos[*]}" >> "$GITHUB_ENV"
+
+      - name: Build RPMs
+        run: |
+          mock -r ${{ matrix.chroot }} --isolation=simple $MOCK_REPOS \
+            --rebuild srpm/*.src.rpm --resultdir results
+
+      # Staged under <chroot>/ so the publish job knows where each RPM goes
+      - name: Stage RPMs
+        run: |
+          mkdir -p rpms/${{ matrix.chroot }}
+          cp -p results/*.rpm rpms/${{ matrix.chroot }}/
+
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.package }}-${{ matrix.chroot }}
+          path: results/*.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpms-${{ matrix.package }}-${{ matrix.chroot }}
+          path: rpms/

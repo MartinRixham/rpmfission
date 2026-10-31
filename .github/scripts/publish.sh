@@ -66,11 +66,14 @@ for dir in "$site"/fedora-*/; do
     fi
 done
 
+# A priority above the default (99) makes dnf take packages that are also in
+# other repositories, such as RPM Fusion's ffmpeg and x264, from this one
 cat > "$site/$REPO_NAME.repo" <<EOF
 [$REPO_NAME]
 name=$REPO_NAME
 baseurl=$REPO_URL/fedora-\$releasever-\$basearch/
 type=rpm-md
+priority=90
 skip_if_unavailable=True
 gpgcheck=0
 repo_gpgcheck=0

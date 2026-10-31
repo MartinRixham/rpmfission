@@ -27,7 +27,7 @@ jobs:
       actions: write
     steps:
       - name: Install tools
-        run: dnf -y install git gh rpmdevtools rpm-build cargo-rpm-macros
+        run: dnf -y install git gh jq rpmdevtools rpm-build cargo-rpm-macros
 
       - uses: actions/checkout@v7
 

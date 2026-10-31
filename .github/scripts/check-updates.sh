@@ -7,8 +7,14 @@
 #
 # The upstream repository is the first github.com/<owner>/<repo> in the spec's
 # URL or Source fields. The latest release (not a draft or pre-release) is
-# used, with a leading "v" or "<name>-" stripped from its tag. Packages whose
-# upstream has no GitHub releases are skipped.
+# used, with a leading "v" or "<name>-" stripped from its tag, or else
+# everything up to the "-" before the version (intel-media-26.3.5). Packages
+# whose upstream has no GitHub releases are skipped.
+#
+# A spec with a "# rpmfission-follows-fedora: <binary package>" line instead
+# follows the version of that Fedora package in the oldest release in
+# FEDORA_RELEASES (in build.yml), as mesa-freeworld must match Fedora's mesa
+# exactly.
 #
 # The update branch is update/<pkg>-<version>. A version whose branch already
 # exists is not offered again, so closing a PR without deleting its branch
@@ -37,30 +43,48 @@ pkg=$(dirname "$spec")
 name=$(rpmspec -q --qf '%{name}\n' --srpm "$spec")
 current=$(rpmspec -q --qf '%{version}\n' --srpm "$spec")
 
-repo=$(rpmspec -P "$spec" |
-    sed -nE 's#^(URL|Source[0-9]*):.*https://github\.com/([^/[:space:]]+/[^/[:space:]]+).*#\2#p' |
-    head -n 1)
-repo=${repo%.git}
-if [ -z "$repo" ]; then
-    echo "$pkg: no GitHub repository in the spec, skipping"
-    exit 0
-fi
-
-err=$(mktemp)
-if ! release=$(gh api "repos/$repo/releases/latest" --jq '[.tag_name, .html_url] | @tsv' 2> "$err"); then
-    if grep -q 'HTTP 404' "$err"; then
-        echo "$pkg: $repo has no releases, skipping"
+follows=$(sed -nE 's/^#[[:space:]]*rpmfission-follows-fedora:[[:space:]]*([^[:space:]]+).*/\1/p' "$spec" | head -n 1)
+if [ -n "$follows" ]; then
+    release=$(sed -nE "s/^[[:space:]]*FEDORA_RELEASES:[[:space:]]*'(.*)'.*/\1/p" .github/workflows/build.yml |
+        jq -r min)
+    read -r version srpm < <(dnf repoquery --quiet --releasever="$release" \
+        --repo=fedora --repo=updates --latest-limit=1 --arch=x86_64 \
+        --qf '%{version} %{sourcerpm}\n' "$follows") || true
+    if [ -z "${version:-}" ]; then
+        echo "::error::$pkg: no $follows in Fedora $release"
+        exit 1
+    fi
+    tag="$follows $version (Fedora $release)"
+    url=https://src.fedoraproject.org/rpms/${srpm%-*-*}
+else
+    repo=$(rpmspec -P "$spec" |
+        sed -nE 's#^(URL|Source[0-9]*):.*https://github\.com/([^/[:space:]]+/[^/[:space:]]+).*#\2#p' |
+        head -n 1)
+    repo=${repo%.git}
+    if [ -z "$repo" ]; then
+        echo "$pkg: no GitHub repository in the spec, skipping"
         exit 0
     fi
-    cat "$err" >&2
-    exit 1
-fi
-IFS=$'\t' read -r tag url <<< "$release"
 
-version=${tag#"$name"-}
-version=${version#v}
+    err=$(mktemp)
+    if ! release=$(gh api "repos/$repo/releases/latest" --jq '[.tag_name, .html_url] | @tsv' 2> "$err"); then
+        if grep -q 'HTTP 404' "$err"; then
+            echo "$pkg: $repo has no releases, skipping"
+            exit 0
+        fi
+        cat "$err" >&2
+        exit 1
+    fi
+    IFS=$'\t' read -r tag url <<< "$release"
+
+    version=${tag#"$name"-}
+    version=${version#v}
+    if ! [[ $version =~ ^[0-9] ]] && [[ $version =~ -v?([0-9][A-Za-z0-9._+~^]*)$ ]]; then
+        version=${BASH_REMATCH[1]}
+    fi
+fi
 if ! [[ $version =~ ^[0-9][A-Za-z0-9._+~^]*$ ]]; then
-    echo "::warning::$pkg: cannot turn release tag '$tag' into an RPM version"
+    echo "::warning::$pkg: cannot turn release '$tag' into an RPM version"
     exit 0
 fi
 
@@ -68,7 +92,7 @@ fi
 rc=0
 rpmdev-vercmp "$version" "$current" > /dev/null || rc=$?
 if [ "$rc" -ne 11 ]; then
-    echo "$pkg: $current is up to date (latest release $tag)"
+    echo "$pkg: $current is up to date (latest: $tag)"
     exit 0
 fi
 
@@ -115,7 +139,7 @@ git commit -q -m "$pkg: update to $version"
 git push -q origin "$branch"
 
 body=$(cat <<EOF
-Upstream release: $url
+Upstream: $url
 
 Automated update of \`$pkg\` from $current to $version. Version, Release,
 the changelog and \`sources\` are updated; the rest needs a person:

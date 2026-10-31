@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       builds: ${{ steps.builds.outputs.builds }}
+      builds-with-repo: ${{ steps.builds.outputs.builds-with-repo }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,6 +34,11 @@ jobs:
       # Each build is one package in one mock chroot (named as COPR names it).
       # A chroot not yet on gh-pages, such as a newly added release, gets
       # every package.
+      #
+      # Packages with a BuildRequires on another package of this repository
+      # (<pkg>, <pkg>-devel, <pkg>-libs or <pkg>-static) build in a second
+      # stage, against the RPMs of the first and the published repository.
+      # Their own build dependencies must be in the first stage.
       - id: builds
         env:
           REQUESTED: ${{ inputs.packages }}
@@ -54,6 +60,11 @@ jobs:
             selected=$(comm -12 <(echo "$all") <(echo "$changed"))
           fi
 
+          repo_deps() {
+            sed -nE 's/^BuildRequires:[[:space:]]*([^[:space:]]+).*/\1/p' "$1/$1.spec" |
+              sed -E 's/-(devel|libs|static)$//' | sort -u | comm -12 - <(echo "$all")
+          }
+
           builds=$(
             for release in $(jq -r '.[]' <<< "$FEDORA_RELEASES"); do
               chroot=fedora-$release-x86_64
@@ -64,63 +75,43 @@ jobs:
                 packages=$all
               fi
               for package in $packages; do
+                with_repo=false
+                [ -n "$(repo_deps "$package")" ] && with_repo=true
                 jq -nc --arg package "$package" --arg chroot "$chroot" \
-                  '{package: $package, chroot: $chroot}'
+                  --argjson with_repo "$with_repo" \
+                  '{package: $package, chroot: $chroot, with_repo: $with_repo}'
               done
             done | jq -sc .
           )
-          echo "builds=$builds" >> "$GITHUB_OUTPUT"
+          echo "builds=$(jq -c 'map(select(.with_repo | not) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
+          echo "builds-with-repo=$(jq -c 'map(select(.with_repo) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
 
   build:
     needs: plan
     if: needs.plan.outputs.builds != '[]'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.plan.outputs.builds) }}
-    container:
-      image: registry.fedoraproject.org/fedora:latest
-      options: --privileged
-    steps:
-      - uses: actions/checkout@v7
+    uses: ./.github/workflows/build-rpms.yml
+    with:
+      builds: ${{ needs.plan.outputs.builds }}
 
-      - name: Install build tools
-        run: dnf -y install mock rpmdevtools rpm-build cargo make
-
-      # Same entry point COPR's make_srpm method uses
-      - name: Build SRPM
-        run: make -f .copr/Makefile srpm outdir=srpm spec=${{ matrix.package }}/${{ matrix.package }}.spec
-
-      - name: Build RPMs
-        run: |
-          mock -r ${{ matrix.chroot }} --isolation=simple \
-            --rebuild srpm/*.src.rpm --resultdir results
-
-      # Staged under <chroot>/ so the publish job knows where each RPM goes
-      - name: Stage RPMs
-        run: |
-          mkdir -p rpms/${{ matrix.chroot }}
-          cp -p results/*.rpm rpms/${{ matrix.chroot }}/
-
-      - if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: logs-${{ matrix.package }}-${{ matrix.chroot }}
-          path: results/*.log
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: rpms-${{ matrix.package }}-${{ matrix.chroot }}
-          path: rpms/
+  build-with-repo:
+    needs: [plan, build]
+    # After the first stage, whether it built, failed or had nothing to build
+    if: >-
+      !cancelled() && needs.plan.result == 'success' &&
+      needs.plan.outputs.builds-with-repo != '[]'
+    uses: ./.github/workflows/build-rpms.yml
+    with:
+      builds: ${{ needs.plan.outputs.builds-with-repo }}
+      with-repo: true
 
   publish:
-    needs: [plan, build]
+    needs: [plan, build, build-with-repo]
     # Publish whatever built, even if some packages in the matrix failed.
     # Only main publishes; other branches, such as update PRs, only build.
     if: >-
-      always() && github.ref == 'refs/heads/main' &&
-      (needs.build.result == 'success' || needs.build.result == 'failure')
+      !cancelled() && github.ref == 'refs/heads/main' &&
+      (contains(fromJSON('["success", "failure"]'), needs.build.result) ||
+       contains(fromJSON('["success", "failure"]'), needs.build-with-repo.result))
     runs-on: ubuntu-latest
     container:
       image: registry.fedoraproject.org/fedora:latest
