@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Yazi
+GenericName=File Manager
+Comment=Terminal file manager based on async I/O
+TryExec=yazi
+Exec=foot -F --app-id=yazi --font="Droid Sans Mono:size=11" yazi %f
+Icon=yazi
+Terminal=false
+MimeType=inode/directory;
+Categories=System;FileManager;FileTools;
+Keywords=file;manager;explorer;browser;yazi;
+StartupWMClass=yazi
