@@ -33,8 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # git for sources.sh hooks that clone upstream, such as bijiben's
       - name: Install build tools
-        run: dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c
+        run: dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c git-core
 
       # Same entry point COPR's make_srpm method uses
       - name: Build SRPM

@@ -33,6 +33,7 @@ builds for x86_64 only.
 
 | Package | Upstream |
 | ------- | -------- |
+| [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/gnome-notes |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
 | [ffmpeg](ffmpeg/ffmpeg.spec) | https://ffmpeg.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
@@ -144,8 +145,10 @@ changelog entry and refreshes `sources`, and the build workflow runs on its
 branch. Patches, `License:` and anything else the release changes are left to
 review. A version whose branch already exists is not offered again, so to skip
 a release, close its PR and keep the branch. Packages with no GitHub releases,
-such as tui-torrent, are skipped, as are those hosted elsewhere: ffmpeg, x264
-and x265 are updated by hand. Keep x264 and x265 at RPM Fusion's sonames
+such as tui-torrent, are skipped, as are those hosted elsewhere: bijiben,
+ffmpeg, x264 and x265 are updated by hand. bijiben's tarball is made from its
+git tag by `sources.sh`, so a bump changes the `tag` and `commit` at the top of
+its spec rather than `sources`. Keep x264 and x265 at RPM Fusion's sonames
 while their packages, which link them, are installed alongside.
 
 A spec with a `# rpmfission-follows-fedora: <package>` line follows that Fedora
