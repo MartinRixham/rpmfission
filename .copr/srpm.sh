@@ -22,18 +22,33 @@ trap 'rm -rf "$sourcedir"' EXIT
 find "$pkgdir" -maxdepth 1 -type f ! -name '*.spec' ! -name sources \
     ! -name sources.sh -exec cp -p {} "$sourcedir" \;
 
-spectool --get-files --sourcedir --define "_sourcedir $sourcedir" "$spec"
-
 # Every downloaded source must have a checksum; generated ones (from
 # sources.sh) are not downloaded and so are not listed
-for url in $(spectool --list-files "$spec" | awk '{print $2}' | grep '://'); do
-    file=$(basename "$url")
+remote_files=$(spectool --list-files "$spec" | awk '{print $2}' |
+    { grep '://' || true; } | xargs -rn1 basename)
+for file in $remote_files; do
     grep -qF "($file)" "$pkgdir/sources" 2>/dev/null ||
         { echo "$file has no checksum in $pkgdir/sources" >&2; exit 1; }
 done
-if [ -f "$pkgdir/sources" ]; then
-    (cd "$sourcedir" && sha512sum --check --strict "$pkgdir/sources")
-fi
+
+# spectool does not fail on download errors, so verify the checksums and
+# retry the whole download a few times to ride out flaky upstream servers
+attempts=3
+for attempt in $(seq "$attempts"); do
+    spectool --get-files --sourcedir --define "_sourcedir $sourcedir" "$spec"
+    if [ ! -f "$pkgdir/sources" ] ||
+        (cd "$sourcedir" && sha512sum --check --strict "$pkgdir/sources"); then
+        break
+    fi
+    if [ "$attempt" -eq "$attempts" ]; then
+        echo "Sources failed verification after $attempts attempts" >&2
+        exit 1
+    fi
+    echo "Source verification failed (attempt $attempt/$attempts), retrying" >&2
+    # Drop partial or corrupt downloads so spectool fetches them again
+    for file in $remote_files; do rm -f "$sourcedir/$file"; done
+    sleep $((attempt * 10))
+done
 
 if [ -x "$pkgdir/sources.sh" ]; then
     (cd "$sourcedir" && "$pkgdir/sources.sh")
