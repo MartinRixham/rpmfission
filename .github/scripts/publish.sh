@@ -6,10 +6,13 @@
 # The directory holds one subdirectory of RPMs per chroot, e.g.
 # fedora-44-x86_64/. Chroots of releases not in FEDORA_RELEASES are removed.
 #
-# Environment: FEDORA_RELEASES (JSON list, e.g. [44]), REPO_URL, REPO_NAME.
+# Environment: FEDORA_RELEASES (JSON list, e.g. [44]), REPO_URL, REPO_NAME,
+# GPG_KEY (fingerprint of a secret key in the gpg keyring, without a
+# passphrase, that signs the RPMs and each chroot's repomd.xml).
 #
 # The layout mirrors a COPR project, one repository per chroot:
 #   <REPO_URL>/<REPO_NAME>.repo
+#   <REPO_URL>/RPM-GPG-KEY-<REPO_NAME>
 #   <REPO_URL>/fedora-$releasever-$basearch/{*.rpm,repodata/}
 #
 # gh-pages is force-pushed as a single commit so old binaries do not pile up
@@ -19,6 +22,8 @@ set -euo pipefail
 new=$(realpath "$1")
 site=$(mktemp -d)
 keep=2
+: "${GPG_KEY:?GPG_KEY must name the signing key}"
+pubkey=RPM-GPG-KEY-$REPO_NAME
 # A separate index so the checkout of main is left alone
 export GIT_INDEX_FILE=$site.index
 
@@ -37,6 +42,7 @@ fi
 # artifacts.
 shopt -s nullglob extglob
 published=0
+declare -A changed
 for dir in "$new"/fedora-*/; do
     chroot=$(basename "$dir")
     rpms=("$dir"!(*.src|*-debuginfo-*|*-debugsource-*).rpm)
@@ -46,7 +52,7 @@ for dir in "$new"/fedora-*/; do
     # Keep the newest $keep builds of each package so a bad one can be
     # downgraded
     dnf repomanage --old --keep "$keep" "$site/$chroot" | xargs -r rm -v
-    createrepo_c --update "$site/$chroot"
+    changed[$chroot]=1
     published=$((published + ${#rpms[@]}))
 done
 if [ "$published" -eq 0 ]; then
@@ -66,6 +72,37 @@ for dir in "$site"/fedora-*/; do
     fi
 done
 
+# The public key is served next to the repositories, and imported into the
+# local rpm database so that rpm -K can tell which RPMs it has signed
+gpg --batch --export --armor "$GPG_KEY" > "$site/$pubkey"
+rpm --import "$site/$pubkey"
+
+# Sign every RPM not yet signed with the key: the new builds, and any older
+# ones published before signing began, so that dnf can still downgrade to
+# them. rpm -K reports "signatures OK" only for a valid signature by a key
+# in the rpm database.
+for dir in "$site"/fedora-*/; do
+    chroot=$(basename "$dir")
+    unsigned=()
+    for rpm in "$dir"*.rpm; do
+        if ! rpm -K "$rpm" 2>&1 | grep -q 'signatures OK'; then
+            unsigned+=("$rpm")
+        fi
+    done
+    if [ ${#unsigned[@]} -gt 0 ]; then
+        rpmsign --addsign --define "_gpg_name $GPG_KEY" "${unsigned[@]}"
+        changed[$chroot]=1
+    fi
+    # Regenerate and sign the metadata where the RPMs changed, or where it
+    # has no signature yet. The signature lets dnf check the metadata
+    # (repo_gpgcheck).
+    if [ -n "${changed[$chroot]:-}" ] || [ ! -f "$dir/repodata/repomd.xml.asc" ]; then
+        createrepo_c --update "$dir"
+        gpg --batch --yes --local-user "$GPG_KEY" --detach-sign --armor \
+            "$dir/repodata/repomd.xml"
+    fi
+done
+
 # A priority above the default (99) makes dnf take packages that are also in
 # other repositories, such as RPM Fusion's ffmpeg and x264, from this one.
 # Metadata expires after 6 hours, as for Fedora's updates repository, instead
@@ -78,8 +115,9 @@ type=rpm-md
 priority=90
 metadata_expire=6h
 skip_if_unavailable=True
-gpgcheck=0
-repo_gpgcheck=0
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=$REPO_URL/$pubkey
 enabled=1
 enabled_metadata=1
 EOF

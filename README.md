@@ -12,7 +12,9 @@ sudo dnf config-manager addrepo --from-repofile=https://martinrixham.github.io/r
 sudo dnf install zellij
 ```
 
-Packages are not signed yet (`gpgcheck=0`).
+The packages and the repository metadata are signed. dnf asks you to accept
+the key the first time you install from the repository. If you added the repository before signing began, add it again
+with `--overwrite` so that dnf checks the signatures.
 
 On Fedora Asahi Remix the same commands work: the Remix is Fedora's aarch64
 release, so dnf picks the `fedora-$releasever-aarch64` repository. Its 16K
