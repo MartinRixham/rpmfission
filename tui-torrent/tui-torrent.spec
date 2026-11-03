@@ -3,7 +3,7 @@
 
 Name:           tui-torrent
 Version:        1.1.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Terminal user interface for searching and downloading torrents
 
 # tui-torrent itself is MIT. The rest covers the bundled crates, as printed by
@@ -61,6 +61,10 @@ install -Dpm 0755 target/rpm/tui-torrent %{buildroot}%{_bindir}/tui-torrent
 %{_bindir}/tui-torrent
 
 %changelog
+* Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 1.1.0-2
+- Update the vendored openssl and openssl-sys crates, for OpenSSL 4 in
+  Fedora 45
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 1.1.0-1
 - Initial package
 - Run aria2 RPC on loopback only, with a per-run secret token

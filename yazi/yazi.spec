@@ -3,7 +3,7 @@
 
 Name:           yazi
 Version:        26.9.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Terminal file manager based on async I/O
 
 # Yazi itself is MIT, and so are its bundled icons (LICENSE-ICONS). The rest
@@ -61,8 +61,9 @@ manages plugins and flavors and talks to running instances.
 # Upstream patches ratatui-core from a git branch, which is vendored too
 cat vendor-git-sources.toml >> .cargo/config.toml
 
-# Link the system Lua 5.4 rather than a bundled Lua 5.5, which Fedora does not
-# ship. The only 5.5 API yazi uses is external strings, which hand a Rust
+%if 0%{?fedora} < 45
+# Link the system Lua 5.4 rather than a bundled Lua 5.5, which Fedora 44 does
+# not ship (Fedora 45 has Lua 5.5, which upstream uses). The only 5.5 API yazi uses is external strings, which hand a Rust
 # buffer to Lua without copying; create_string copies it instead, with the
 # same result. Done with sed rather than a patch so that it keeps up with new
 # call sites in upstream releases; the checks fail the build if upstream's
@@ -72,6 +73,7 @@ grep -q '"lua54"' Cargo.toml
 grep -rlZ --include='*.rs' create_external_string yazi-*/ |
     xargs -0 -r sed -i 's/\bcreate_external_string(/create_string(/g'
 if grep -rq --include='*.rs' create_external_string yazi-*/; then exit 1; fi
+%endif
 # Each crate that uses mlua turns on its bundled Lua by default
 sed -i -E 's/^(default[[:space:]]*=[[:space:]]*)\[ "vendored-lua" \]/\1[]/' yazi-*/Cargo.toml
 if grep -q '^default.*vendored-lua' yazi-*/Cargo.toml; then exit 1; fi
@@ -129,6 +131,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/yazi.desktop
 %{_datadir}/pixmaps/yazi.png
 
 %changelog
+* Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-4
+- Link Fedora 45's Lua 5.5, as upstream does; Fedora 44 keeps Lua 5.4
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.9.1-3
 - Build jemalloc for 64K pages on aarch64, so yazi runs on Asahi Linux's
   16K page kernel

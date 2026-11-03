@@ -3,7 +3,7 @@
 
 Name:           zellij
 Version:        0.45.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -102,6 +102,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zellij.svg
 
 %changelog
+* Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-4
+- Update the vendored openssl-sys crate, for OpenSSL 4 in Fedora 45
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-3
 - Use the Droid Sans Mono Nerd Font in the desktop entry, for the status bar
   arrows
