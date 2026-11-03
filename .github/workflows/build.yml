@@ -17,7 +17,7 @@ env:
   # Fedora releases to build for. Add a release when it branches or ships, and
   # remove it when it goes end of life; its chroot is then deleted from the
   # published repository on the next publish.
-  FEDORA_RELEASES: '[44]'
+  FEDORA_RELEASES: '[44, 45]'
   # Architectures to build for, each on a runner of its own architecture (see
   # build-rpms.yml). aarch64 is also the repository for Fedora Asahi Remix.
   FEDORA_ARCHES: '["x86_64", "aarch64"]'
@@ -45,7 +45,10 @@ jobs:
       # A chroot not yet on gh-pages, such as a newly added release, gets
       # every package. A package is left out of chroots whose architecture
       # its ExclusiveArch or ExcludeArch rules out, as COPR does; noarch
-      # packages build in every chroot.
+      # packages build in every chroot. A spec with
+      # "# rpmfission-fedora: <op> <release>" lines (op one of < <= > >= =)
+      # builds only for the releases that meet all of them, so that a package
+      # can have a spec per range of releases, such as ffmpeg and ffmpeg8.
       #
       # Packages with a BuildRequires on another package of this repository
       # (<pkg>, <pkg>-devel, <pkg>-libs or <pkg>-static) build in a second
@@ -79,10 +82,33 @@ jobs:
               sed -E 's/-(devel|libs|static)$//' | sort -u | comm -12 - <(echo "$all")
           }
 
+          # A malformed rpmfission-fedora line fails here, not silently in
+          # the command substitutions below
+          fedora_re='^#[[:space:]]*rpmfission-fedora:[[:space:]]*(<|<=|>|>=|=)[[:space:]]*([0-9]+)[[:space:]]*$'
+          if bad=$(grep -H 'rpmfission-fedora:' */*.spec | grep -vE ":${fedora_re#^}"); then
+            echo "::error::Malformed rpmfission-fedora line: $bad"
+            exit 1
+          fi
+
+          # True if the release meets every rpmfission-fedora line of the spec
+          release_ok() {
+            local release=$1 spec=$2 op version
+            while read -r op version; do
+              case $op in
+                '<') (( release < version )) ;;
+                '<=') (( release <= version )) ;;
+                '>') (( release > version )) ;;
+                '>=') (( release >= version )) ;;
+                '=') (( release == version )) ;;
+              esac || return 1
+            done < <(sed -nE "s/$fedora_re/\\1 \\2/p" "$spec")
+          }
+
           builds_for() {
-            local arch=$1 package exclusive exclude
-            shift
+            local release=$1 arch=$2 package exclusive exclude
+            shift 2
             for package; do
+              release_ok "$release" "$package/$package.spec" || continue
               exclusive=$(rpmspec -q --srpm --qf '[%{EXCLUSIVEARCH} ]' "$package/$package.spec")
               exclude=$(rpmspec -q --srpm --qf '[%{EXCLUDEARCH} ]' "$package/$package.spec")
               if [ -n "$exclusive" ] && ! grep -qw -- "$arch" <<< "$exclusive"; then
@@ -103,7 +129,7 @@ jobs:
               else
                 packages=$all
               fi
-              for package in $(builds_for "$arch" $packages); do
+              for package in $(builds_for "$release" "$arch" $packages); do
                 with_repo=false
                 [ -n "$(repo_deps "$package")" ] && with_repo=true
                 jq -nc --arg package "$package" --arg chroot "$chroot" \

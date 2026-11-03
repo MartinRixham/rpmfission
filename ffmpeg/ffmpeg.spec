@@ -9,21 +9,25 @@
 # Fedora's build out with
 #   dnf swap ffmpeg-free ffmpeg --allowerasing
 # Move to a new FFmpeg major release (new sonames) only when Fedora does.
+# Releases still on the previous major release are built from ffmpeg8/,
+# which has the same package names.
+#
+# rpmfission-fedora: >= 45
 #
 # The configure options follow Fedora's ffmpeg.spec, which knows which
 # libraries Fedora has, with its codec restrictions dropped.
 
-%global avcodec_soversion    62
-%global avdevice_soversion   62
-%global avfilter_soversion   11
-%global avformat_soversion   62
-%global avutil_soversion     60
-%global swresample_soversion 6
-%global swscale_soversion    9
+%global avcodec_soversion    63
+%global avdevice_soversion   63
+%global avfilter_soversion   12
+%global avformat_soversion   63
+%global avutil_soversion     61
+%global swresample_soversion 7
+%global swscale_soversion    10
 
 Name:           ffmpeg
-Version:        8.1.3
-Release:        3%{?dist}
+Version:        9.0.2
+Release:        1%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -42,10 +46,12 @@ Patch0:         ffmpeg-chromium.patch
 # fdk-aac-free (Fedora's fdk-aac) is GPL compatible (from Fedora)
 # https://bugzilla.redhat.com/show_bug.cgi?id=1501522#c112
 Patch1:         ffmpeg-allow-fdk-aac-free.patch
-# Vulkan video frames exported to DMA-BUF render wrongly in Firefox (from
-# Fedora and RPM Fusion)
-# https://github.com/FFmpeg/FFmpeg/commit/25e187f8494966377a4b9d077260ce7b501a911c
-Patch2:         ffmpeg-vulkan-direct-export.patch
+# VapourSynth R79 renamed libvapoursynth-script to libvsscript (from Fedora)
+Patch2:         ffmpeg-vapoursynth-lib-rename.patch
+# Backward seeking in H.264 with openh264 (from Fedora)
+# https://bugzilla.redhat.com/show_bug.cgi?id=2547586
+# https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/883e8a6336b2651f7be79a6a9aa5f3cc22937948
+Patch3:         ffmpeg-openh264-flush-callback.patch
 
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Requires:       libavdevice%{?_isa} = %{version}-%{release}
@@ -57,6 +63,8 @@ BuildRequires:  fdk-aac-free-devel
 BuildRequires:  flite-devel >= 2.2
 BuildRequires:  game-music-emu-devel
 BuildRequires:  gcc
+# Compiles the Vulkan shaders to SPIR-V at build time
+BuildRequires:  glslc
 BuildRequires:  gnupg2
 BuildRequires:  gsm-devel
 BuildRequires:  ladspa-devel
@@ -69,6 +77,9 @@ BuildRequires:  libXext-devel
 BuildRequires:  libXv-devel
 BuildRequires:  make
 BuildRequires:  nasm
+# Fedora's choice: the 13.0 API still supports older NVIDIA cards
+# https://bugzilla.redhat.com/show_bug.cgi?id=2521662#c3
+BuildRequires:  nv-codec-headers13.0
 BuildRequires:  perl(Pod::Man)
 BuildRequires:  pkgconfig(alsa)
 BuildRequires:  pkgconfig(aom)
@@ -79,7 +90,6 @@ BuildRequires:  pkgconfig(codec2)
 BuildRequires:  pkgconfig(dav1d)
 BuildRequires:  pkgconfig(dvdnav)
 BuildRequires:  pkgconfig(dvdread)
-BuildRequires:  pkgconfig(ffnvcodec)
 BuildRequires:  pkgconfig(flac)
 BuildRequires:  pkgconfig(fontconfig)
 BuildRequires:  pkgconfig(freetype2)
@@ -138,7 +148,6 @@ BuildRequires:  pkgconfig(opus)
 BuildRequires:  pkgconfig(rav1e)
 BuildRequires:  pkgconfig(rubberband)
 BuildRequires:  pkgconfig(sdl2)
-BuildRequires:  pkgconfig(shaderc) >= 2019.1
 BuildRequires:  pkgconfig(smbclient)
 BuildRequires:  pkgconfig(snappy)
 BuildRequires:  pkgconfig(soxr)
@@ -148,7 +157,7 @@ BuildRequires:  pkgconfig(SvtAv1Enc) >= 0.9.0
 BuildRequires:  pkgconfig(tesseract)
 BuildRequires:  pkgconfig(theora)
 BuildRequires:  pkgconfig(twolame)
-BuildRequires:  pkgconfig(vapoursynth)
+BuildRequires:  pkgconfig(vapoursynth) >= 79
 BuildRequires:  pkgconfig(vdpau)
 BuildRequires:  pkgconfig(vidstab)
 BuildRequires:  pkgconfig(vo-amrwbenc)
@@ -332,7 +341,6 @@ cp -a doc/examples/{*.c,Makefile,README} _doc/examples/
     --enable-librsvg \
     --enable-librtmp \
     --enable-librubberband \
-    --enable-libshaderc \
     --enable-libsmbclient \
     --enable-libsnappy \
     --enable-libsoxr \
@@ -478,6 +486,14 @@ fi
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 9.0.2-1
+- Update to 9.0.2, with new sonames, for Fedora 45, which moved to FFmpeg 9.
+  Fedora 44 stays on 8.1, built from ffmpeg8/
+- Drop the Vulkan direct-export patch, which is in 9.0
+- Compile the Vulkan shaders with glslc; FFmpeg 9 dropped libshaderc
+- Build against VapourSynth R79 and nv-codec-headers 13.0, as Fedora does
+- Fix backward seeking with openh264
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-3
 - Make GStreamer rescan gst-libav when the libraries are installed or removed
 

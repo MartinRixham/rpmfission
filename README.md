@@ -37,7 +37,8 @@ builds for x86_64 only.
 | ------- | -------- |
 | [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/gnome-notes |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
-| [ffmpeg](ffmpeg/ffmpeg.spec) | https://ffmpeg.org/ |
+| [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
+| [ffmpeg8](ffmpeg8/ffmpeg8.spec) (`ffmpeg` 8 for Fedora 44) | https://ffmpeg.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
@@ -52,7 +53,10 @@ builds for x86_64 only.
 
 `ffmpeg` has every codec, x264, x265 and all of FFmpeg's hardware APIs. It
 replaces Fedora's `ffmpeg-free` and RPM Fusion's `ffmpeg`, with the same
-library sonames, so every application that links FFmpeg gets the codecs:
+library sonames, so every application that links FFmpeg gets the codecs. Each
+release gets the FFmpeg major version Fedora ships for it: 8 for Fedora 44
+(from `ffmpeg8/`) and 9 for Fedora 45 (from `ffmpeg/`), under the same package
+names:
 
 ```sh
 sudo dnf swap ffmpeg-free ffmpeg --allowerasing
@@ -87,6 +91,10 @@ without changes:
 - `<name>/sources`: SHA512 checksums of the spec's downloaded sources, in
   dist-git format (`sha512sum --tag <file>`). Every remote source must be
   listed, and the SRPM build fails on a missing or mismatched checksum.
+- `# rpmfission-fedora: <op> <release>`: optional spec comments (`op` one of
+  `<`, `<=`, `>`, `>=` and `=`) that limit the Fedora releases the package
+  builds for, such as `< 45`. A package can so have a spec per range of
+  releases, as `ffmpeg` and `ffmpeg8` do. A malformed line fails the build.
 - `<name>/sources.sh`: an optional hook that generates sources that cannot be
   downloaded, such as vendored Rust crates. It runs in a directory that already
   holds the spec's downloaded sources.
@@ -98,7 +106,8 @@ CI does what COPR does: it builds the SRPM through `.copr/Makefile`, then
 rebuilds it with `mock` in the `fedora-<release>-<arch>` chroot, on a GitHub
 runner of that architecture (`ubuntu-24.04-arm` for aarch64). A package whose
 `ExclusiveArch` or `ExcludeArch` rules out an architecture is not built
-for it. The network is
+for it, nor is a package for a release its `rpmfission-fedora` lines rule
+out. The network is
 off during the RPM build. The published repository uses COPR's per-chroot
 layout (`fedora-$releasever-$basearch/`).
 
@@ -106,10 +115,11 @@ layout (`fedora-$releasever-$basearch/`).
 
 ```sh
 make -f .copr/Makefile srpm outdir=out spec=zellij/zellij.spec
-mock -r fedora-44-x86_64 --rebuild out/*.src.rpm
+mock -r fedora-45-x86_64 --rebuild out/*.src.rpm
 ```
 
-Use `fedora-44-aarch64` on an aarch64 machine. mock can build it on x86_64
+Use `fedora-45-aarch64` on an aarch64 machine, and `fedora-44-*` for Fedora
+44. mock can build it on x86_64
 through `qemu-user-static`, but slowly.
 
 ## CI
@@ -148,7 +158,7 @@ branch. Patches, `License:` and anything else the release changes are left to
 review. A version whose branch already exists is not offered again, so to skip
 a release, close its PR and keep the branch. Packages with no GitHub releases,
 such as tui-torrent, are skipped, as are those hosted elsewhere: bijiben,
-ffmpeg, x264 and x265 are updated by hand. bijiben's tarball is made from its
+ffmpeg, ffmpeg8, x264 and x265 are updated by hand. bijiben's tarball is made from its
 git tag by `sources.sh`, so a bump changes the `tag` and `commit` at the top of
 its spec rather than `sources`. Keep x264 and x265 at RPM Fusion's sonames
 while their packages, which link them, are installed alongside.
