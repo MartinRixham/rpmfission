@@ -163,6 +163,14 @@ git tag by `sources.sh`, so a bump changes the `tag` and `commit` at the top of
 its spec rather than `sources`. Keep x264 and x265 at RPM Fusion's sonames
 while their packages, which link them, are installed alongside.
 
+A spec that carries Fedora's patches for a package names it on a
+`# rpmfission-fedora-patches: <package>` line. The same workflow compares the
+spec's patches, by file name, with those of Fedora's spec for each release the
+spec builds for, and keeps an issue open for each that differs, such as when
+Fedora backports a fix. Fedora patches left out on purpose go on
+`# rpmfission-fedora-patches-ignore:` lines, with a comment saying why. ffmpeg
+and ffmpeg8 do this.
+
 A spec with a `# rpmfission-follows-fedora: <package>` line follows that Fedora
 package instead: the PR comes when the oldest release in `FEDORA_RELEASES`
 gets a new version of it. `mesa-freeworld` follows `mesa-dri-drivers` this

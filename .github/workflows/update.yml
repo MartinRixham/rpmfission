@@ -1,7 +1,9 @@
 name: Check upstream releases
 
 # Opens a pull request for each package whose upstream GitHub repository has a
-# newer release. See .github/scripts/check-updates.sh.
+# newer release (see .github/scripts/check-updates.sh), and an issue for each
+# package whose patches differ from those of the Fedora package it takes them
+# from (see .github/scripts/check-fedora-patches.sh).
 #
 # Requires "Allow GitHub Actions to create and approve pull requests" in the
 # repository's Actions settings.
@@ -23,6 +25,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
       # To run the build workflow on the update branch
       actions: write
     steps:
@@ -45,3 +48,11 @@ jobs:
           git config --global user.name "$GIT_AUTHOR_NAME"
           git config --global user.email "$GIT_AUTHOR_EMAIL"
           .github/scripts/check-updates.sh
+
+      # Even if an update pull request failed
+      - name: Compare patches with Fedora's
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: .github/scripts/check-fedora-patches.sh
