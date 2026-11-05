@@ -29,15 +29,9 @@ same day. If you added the repository before these were set, add it again with
 
 ## Packages
 
-`intel-media-driver`, `mesa-freeworld` and `video-drivers` are x86_64 only.
-On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video, which Fedora
-builds for x86_64 only.
-
-`avd-fw-freeworld` is for Fedora Asahi Remix only: firmware for the Apple
-Silicon video decoder with H.264 and H.265, which Asahi's own `avd-fw` leaves
-out. Install it with `sudo dnf install avd-fw-freeworld`, or
-`sudo dnf swap avd-fw avd-fw-freeworld` where Asahi's package is installed,
-then reboot. GStreamer applications then decode on the hardware.
+`intel-media-driver` and `mesa-freeworld` are x86_64 only, and
+`avd-fw-freeworld` is aarch64 only (Fedora Asahi Remix). On aarch64, `ffmpeg`
+has no libvmaf or Intel Quick Sync Video, which Fedora builds for x86_64 only.
 
 | Package | Upstream |
 | ------- | -------- |
@@ -79,10 +73,19 @@ packages install full builds, which take precedence over Fedora's:
 | `video-drivers-intel` | `intel-media-driver` (VA-API, Broadwell and newer) and the Quick Sync runtimes |
 | `video-drivers-amd` | `mesa-va-drivers-freeworld` (VA-API for radeonsi, r600 and nouveau) |
 | `video-drivers-nvidia` | `libva-nvidia-driver`; NVDEC/NVENC need NVIDIA's proprietary driver, from RPM Fusion |
-| `video-drivers` | all of the above |
+| `video-drivers-apple` | `avd-fw-freeworld` (video decoder firmware for Apple Silicon Macs, on Fedora Asahi Remix) |
+| `video-drivers` | all of the above for the architecture: Intel, AMD and NVIDIA on x86_64, Apple on aarch64 |
 
 Install the one for your GPU, or `video-drivers` for any GPU (drivers for
 absent hardware are not loaded), and check with `vainfo` from `libva-utils`.
+
+On Apple Silicon, the firmware is Asahi's, built with H.264 and H.265, which
+Asahi's own `avd-fw` package leaves out. It replaces that package
+(`sudo dnf swap avd-fw video-drivers-apple` where it is installed), and the
+decoder starts after a reboot. It is a V4L2 decoder rather than VA-API:
+GStreamer applications use it through the `v4l2codecs` plugin, but FFmpeg, and
+so mpv, Firefox and Chromium, does not support it yet. Check for the decoder
+with `v4l2-ctl --list-devices` from `v4l-utils`.
 
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is

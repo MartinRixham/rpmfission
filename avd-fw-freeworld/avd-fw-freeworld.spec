@@ -9,9 +9,9 @@
 # 11236058). The third is needed on Asahi kernels up to asahi-7.2.14-1,
 # which read the codec config from the end of the firmware.
 #
-# Install with "dnf swap avd-fw avd-fw-freeworld" where Asahi's avd-fw is
-# installed. The firmware is loaded when the driver probes, so reload it
-# ("modprobe -r apple_avd; modprobe apple_avd") or reboot.
+# Installed by video-drivers-apple. "dnf swap avd-fw video-drivers-apple"
+# replaces Asahi's avd-fw. The firmware is loaded when the driver probes, so
+# reload it ("modprobe -r apple_avd; modprobe apple_avd") or reboot.
 
 %global srcname avd-fw
 
