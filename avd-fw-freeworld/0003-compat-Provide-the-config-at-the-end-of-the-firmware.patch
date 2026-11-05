@@ -1,0 +1,53 @@
+From ee9478c45bc38ed29b392be66229e1dec4c9cbfe Mon Sep 17 00:00:00 2001
+From: Janne Grunau <j@jannau.net>
+Date: Sat, 31 Oct 2026 16:38:08 +0100
+Subject: [PATCH 3/3] compat: Provide the config at the end of the firmware as
+ well
+
+This is for backwards compatibility with the asahi downstream kernel up
+to asahi-7.2.14-1.
+
+Signed-off-by: Janne Grunau <j@jannau.net>
+---
+ avd-cm3.ld   | 1 +
+ meson.build  | 2 ++
+ src/config.c | 3 +++
+ 3 files changed, 6 insertions(+)
+
+diff --git a/avd-cm3.ld b/avd-cm3.ld
+index 5182d9d..3e119ed 100644
+--- a/avd-cm3.ld
++++ b/avd-cm3.ld
+@@ -8,4 +8,5 @@ SECTIONS {
+     .text ALIGN(0x100) : { *(.text*)   }
+     .data    : { *(.data*)   }
+     .rodata  : { *(.rodata*) }
++    .compat : { *(.compat)   }
+ }
+diff --git a/meson.build b/meson.build
+index 182a782..68fe67d 100644
+--- a/meson.build
++++ b/meson.build
+@@ -77,6 +77,8 @@ foreach var : avd_variants
+                     '-O',
+                     'binary',
+                     '--strip-debug',
++                    '--change-section-address',
++                    '.compat=' + (var['pad'] - 32).to_string(),
+                     '--pad-to=' + var['pad'].to_string(),
+                     '@INPUT0@',
+                     '@OUTPUT0@']
+diff --git a/src/config.c b/src/config.c
+index 4bfa9e5..5f29518 100644
+--- a/src/config.c
++++ b/src/config.c
+@@ -20,3 +20,6 @@ const struct avd_config config = {
+               (AVD_ENABLE_CODEC_H265 ?  AVD_CAPABILITY_HEVC : 0) |
+               (AVD_ENABLE_CODEC_VP9  ?  AVD_CAPABILITY_VP9  : 0),
+ };
++
++__attribute__((section(".compat"), used))
++const u32 config_compat[2] = { config.magic, config.codecs };
+-- 
+2.56.0
+

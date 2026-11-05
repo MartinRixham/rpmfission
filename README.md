@@ -33,8 +33,15 @@ same day. If you added the repository before these were set, add it again with
 On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video, which Fedora
 builds for x86_64 only.
 
+`avd-fw-freeworld` is for Fedora Asahi Remix only: firmware for the Apple
+Silicon video decoder with H.264 and H.265, which Asahi's own `avd-fw` leaves
+out. Install it with `sudo dnf install avd-fw-freeworld`, or
+`sudo dnf swap avd-fw avd-fw-freeworld` where Asahi's package is installed,
+then reboot. GStreamer applications then decode on the hardware.
+
 | Package | Upstream |
 | ------- | -------- |
+| [avd-fw-freeworld](avd-fw-freeworld/avd-fw-freeworld.spec) | https://github.com/AsahiLinux/avd-fw |
 | [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/gnome-notes |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
 | [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
