@@ -1,0 +1,163 @@
+From 6017da7a9133216dfbb339d41c60bbe0567d8678 Mon Sep 17 00:00:00 2001
+From: Martin Rixham <martin.rixham@gmail.com>
+Date: Thu, 5 Nov 2026 17:17:52 +0000
+Subject: [PATCH] v4l2codecs: give zero-copy output buffers the display size in
+ their meta
+
+The pool sets the GstVideoMeta of each buffer to the size of the V4L2
+buffer, which is the coded size: aligned to the decoder's block size, so
+1920x1088 for 1080p H.264 and H.265 on most decoders. When the buffer is
+pushed downstream without copying, its meta must have the size negotiated
+in the caps, with the padding described by the plane offsets and strides.
+gst_video_frame_map() takes the frame size from the meta, so
+videoconvertscale, which rebuilds its converter from the mapped frame,
+scaled the padding into the picture: 1080p video was squashed by 8 lines,
+and frames whose width is not aligned were squashed horizontally.
+
+Keep the coded size in the pool, which the copy paths need to map the
+frame (H.265 cropping reads from the crop offset within it), and set the
+display size when a buffer is output without copying.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ sys/v4l2codecs/gstv4l2codecav1dec.c   |  3 +++
+ sys/v4l2codecs/gstv4l2codech264dec.c  |  3 +++
+ sys/v4l2codecs/gstv4l2codech265dec.c  |  3 +++
+ sys/v4l2codecs/gstv4l2codecmpeg2dec.c |  3 +++
+ sys/v4l2codecs/gstv4l2codecpool.c     | 24 ++++++++++++++++++++++++
+ sys/v4l2codecs/gstv4l2codecpool.h     |  4 ++++
+ sys/v4l2codecs/gstv4l2codecvp8dec.c   |  3 +++
+ sys/v4l2codecs/gstv4l2codecvp9dec.c   |  3 +++
+ 8 files changed, 46 insertions(+)
+
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecav1dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecav1dec.c
+index c5ad26f..88dd3d7 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecav1dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecav1dec.c
+@@ -1526,6 +1526,9 @@ gst_v4l2_codec_av1_dec_output_picture (GstAV1Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_av1_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->render_width, self->render_height);
+ 
+   gst_av1_picture_unref (picture);
+ 
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech264dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech264dec.c
+index 8374066..1311f0c 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech264dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech264dec.c
+@@ -1154,6 +1154,9 @@ gst_v4l2_codec_h264_dec_output_picture (GstH264Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_h264_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->display_width, self->display_height);
+ 
+   gst_h264_picture_unref (picture);
+ 
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech265dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech265dec.c
+index 43cf9bb..1677770 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech265dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codech265dec.c
+@@ -1395,6 +1395,9 @@ gst_v4l2_codec_h265_dec_output_picture (GstH265Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_h265_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->display_width, self->display_height);
+ 
+   gst_h265_picture_unref (picture);
+ 
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecmpeg2dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecmpeg2dec.c
+index 0247be3..8b3d330 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecmpeg2dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecmpeg2dec.c
+@@ -785,6 +785,9 @@ gst_v4l2_codec_mpeg2_dec_output_picture (GstMpeg2Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_mpeg2_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->width, self->height);
+ 
+   gst_mpeg2_picture_unref (picture);
+ 
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.c
+index 9a539b1..ce9fcef 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.c
+@@ -179,3 +179,27 @@ gst_v4l2_codec_buffer_get_index (GstBuffer * buffer)
+   GstMemory *mem = gst_buffer_peek_memory (buffer, 0);
+   return gst_v4l2_codec_memory_get_index (mem);
+ }
++
++/*
++ * Set the size in the GstVideoMeta of a buffer that is pushed downstream
++ * without copying. The pool gives the meta the size of the V4L2 buffer, which
++ * is the coded size, aligned to the decoder's block size, and the copy paths
++ * map the frame with that. But the meta of a buffer sent downstream must have
++ * the size negotiated in the caps; the padding of the V4L2 buffer is described
++ * by the plane offsets and strides. Elements that map frames through the meta,
++ * such as videoconvertscale, otherwise scale the padding into the picture
++ * (a 1920x1080 H.264 frame is decoded into 1920x1088 and squashed by 8 lines).
++ * The pool resets the meta when the buffer is acquired again.
++ */
++void
++gst_v4l2_codec_buffer_set_display_size (GstBuffer * buffer, gint width,
++    gint height)
++{
++  GstVideoMeta *vmeta = gst_buffer_get_video_meta (buffer);
++
++  g_return_if_fail (vmeta);
++
++  /* Never larger than the buffer: an AV1 render size can exceed the frame */
++  vmeta->width = MIN (vmeta->width, width);
++  vmeta->height = MIN (vmeta->height, height);
++}
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.h b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.h
+index 6ae194f..aa39140 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.h
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecpool.h
+@@ -32,3 +32,7 @@ GstV4l2CodecPool *gst_v4l2_codec_pool_new  (GstV4l2CodecAllocator *allocator,
+                                             const GstVideoInfoDmaDrm * vinfo_drm);
+ 
+ guint32           gst_v4l2_codec_buffer_get_index (GstBuffer * buffer);
++
++void              gst_v4l2_codec_buffer_set_display_size (GstBuffer * buffer,
++                                                          gint width,
++                                                          gint height);
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp8dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp8dec.c
+index 38c77be..9e4afa3 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp8dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp8dec.c
+@@ -842,6 +842,9 @@ gst_v4l2_codec_vp8_dec_output_picture (GstVp8Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_vp8_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->width, self->height);
+ 
+   gst_vp8_picture_unref (picture);
+ 
+diff --git a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp9dec.c b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp9dec.c
+index 8fc949d..cd9b819 100644
+--- a/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp9dec.c
++++ b/subprojects/gst-plugins-bad/sys/v4l2codecs/gstv4l2codecvp9dec.c
+@@ -1115,6 +1115,9 @@ gst_v4l2_codec_vp9_dec_output_picture (GstVp9Decoder * decoder,
+ 
+   if (self->copy_frames)
+     gst_v4l2_codec_vp9_dec_copy_output_buffer (self, frame);
++  else
++    gst_v4l2_codec_buffer_set_display_size (frame->output_buffer,
++        self->width, self->height);
+ 
+   gst_vp9_picture_unref (picture);
+ 
+-- 
+2.56.0
+

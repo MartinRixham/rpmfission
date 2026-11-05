@@ -30,8 +30,9 @@ same day. If you added the repository before these were set, add it again with
 ## Packages
 
 `intel-media-driver` and `mesa-freeworld` are x86_64 only, and
-`avd-fw-freeworld` is aarch64 only (Fedora Asahi Remix). On aarch64, `ffmpeg`
-has no libvmaf or Intel Quick Sync Video, which Fedora builds for x86_64 only.
+`avd-fw-freeworld` (Fedora Asahi Remix) and `gstreamer1-plugins-bad-free` are
+aarch64 only. On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video,
+which Fedora builds for x86_64 only.
 
 | Package | Upstream |
 | ------- | -------- |
@@ -40,6 +41,7 @@ has no libvmaf or Intel Quick Sync Video, which Fedora builds for x86_64 only.
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
 | [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
 | [ffmpeg8](ffmpeg8/ffmpeg8.spec) (`ffmpeg` 8 for Fedora 44) | https://ffmpeg.org/ |
+| [gstreamer1-plugins-bad-free](gstreamer1-plugins-bad-free/gstreamer1-plugins-bad-free.spec) (Fedora's, with a fix) | https://gstreamer.freedesktop.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
@@ -86,6 +88,11 @@ decoder starts after a reboot. It is a V4L2 decoder rather than VA-API:
 GStreamer applications use it through the `v4l2codecs` plugin, but FFmpeg, and
 so mpv, Firefox and Chromium, does not support it yet. Check for the decoder
 with `v4l2-ctl --list-devices` from `v4l-utils`.
+
+`gstreamer1-plugins-bad-free` is Fedora's package with a fix to that plugin:
+Fedora's gives the frames the padded size of the decoder's buffers, so
+`videoconvert` squashes 1080p video by 8 lines. It replaces Fedora's build
+on `dnf upgrade`, and follows Fedora's version like `mesa-freeworld`.
 
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is
@@ -184,7 +191,9 @@ and ffmpeg8 do this.
 A spec with a `# rpmfission-follows-fedora: <package>` line follows that Fedora
 package instead: the PR comes when the oldest release in `FEDORA_RELEASES`
 gets a new version of it. `mesa-freeworld` follows `mesa-dri-drivers` this
-way.
+way, and `gstreamer1-plugins-bad-free` follows Fedora's own package. Such a
+PR bumps only the version: take Fedora's new spec and redo the changes the
+spec marks.
 
 ## Repository settings
 
