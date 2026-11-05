@@ -91,8 +91,12 @@ with `v4l2-ctl --list-devices` from `v4l-utils`.
 
 `gstreamer1-plugins-bad-free` is Fedora's package with a fix to that plugin:
 Fedora's gives the frames the padded size of the decoder's buffers, so
-`videoconvert` squashes 1080p video by 8 lines. It replaces Fedora's build
-on `dnf upgrade`, and follows Fedora's version like `mesa-freeworld`.
+`videoconvert` squashes 1080p video by 8 lines. It follows Fedora's version
+like `mesa-freeworld`. Fedora's dnf does not change a package's vendor on
+upgrade, so `video-drivers-apple` installs a vendor change policy
+(`/usr/share/dnf5/vendors.d/`) that lets dnf replace Fedora's build with this
+one. With `video-drivers-apple` installed, the next `dnf upgrade` after it
+does so.
 
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is

@@ -9,10 +9,13 @@
 
 Name:           video-drivers
 Version:        1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Hardware video acceleration drivers for all supported GPUs
 
 License:        MIT
+
+# dnf vendor change policy for rpmfission's gstreamer1-plugins-bad-free
+Source0:        rpmfission-gstreamer1-plugins-bad-free.conf
 
 ExclusiveArch:  x86_64 aarch64
 
@@ -100,8 +103,12 @@ Summary:        Hardware video acceleration drivers for Apple Silicon Macs
 # Firmware for the video decoder (AVD), with all codecs. Replaces Asahi's
 # avd-fw, which conflicts with it: "dnf swap avd-fw video-drivers-apple"
 Requires:       avd-fw-freeworld
-# GStreamer's v4l2codecs, the stateless V4L2 decoders that use it
+# GStreamer's v4l2codecs, the stateless V4L2 decoders that use it. This
+# repository's build fixes it; its vendor change policy lets dnf upgrade
+# Fedora's build to it.
 Recommends:     gstreamer1-plugins-bad-free
+# Reads the vendor change policy
+Requires:       libdnf5 >= 5.3
 # v4l2-ctl, to check the decoder device
 Recommends:     v4l-utils
 
@@ -113,6 +120,10 @@ the Asahi kernel's apple_avd V4L2 driver needs. GStreamer applications
 v4l2codecs plugin. FFmpeg, and so mpv, Firefox and Chromium, has no support
 for these decoders yet. The firmware is loaded when the driver starts, so
 reboot after installing.
+
+It also lets dnf replace Fedora's gstreamer1-plugins-bad-free with this
+repository's build, which fixes the v4l2codecs plugin for video whose size is
+not aligned, such as 1080p.
 %endif
 
 %prep
@@ -120,6 +131,10 @@ reboot after installing.
 %build
 
 %install
+%ifarch aarch64
+install -D -p -m 0644 %{SOURCE0} \
+    %{buildroot}%{_datadir}/dnf5/vendors.d/rpmfission-gstreamer1-plugins-bad-free.conf
+%endif
 
 %files
 
@@ -133,9 +148,14 @@ reboot after installing.
 
 %ifarch aarch64
 %files apple
+%{_datadir}/dnf5/vendors.d/rpmfission-gstreamer1-plugins-bad-free.conf
 %endif
 
 %changelog
+* Thu Nov 05 2026 Martin Rixham <martin.rixham@gmail.com> - 1-3
+- video-drivers-apple: add a dnf vendor change policy, so that dnf upgrades
+  Fedora's gstreamer1-plugins-bad-free to this repository's build
+
 * Thu Nov 05 2026 Martin Rixham <martin.rixham@gmail.com> - 1-2
 - Add video-drivers-apple for Apple Silicon (Asahi)
 - Build for aarch64 too; the packages are archful so that each architecture
