@@ -3,7 +3,7 @@
 
 Name:           zellij
 Version:        0.45.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -16,6 +16,8 @@ Source0:        https://github.com/zellij-org/zellij/archive/v%{version}/%{name}
 Source1:        %{name}-%{version}-vendor.tar.xz
 # Launches zellij in foot, replacing upstream's Terminal=true entry
 Source2:        zellij.desktop
+# AstroNvim as the system-wide Neovim config, for users without their own
+Source3:        astronvim.lua
 # The logo is taller than wide and has no viewBox, so icon renderers that
 # scale it to a square squash the hexagon. Make the canvas square with the
 # hexagon centred.
@@ -34,12 +36,24 @@ BuildRequires:  desktop-file-utils
 # Used by the desktop entry
 Requires:       foot
 Requires:       droid-sans-mono-nerd-fonts
+# Used by the AstroNvim config: AstroNvim 6 needs Neovim 0.12, and lazy.nvim
+# clones the plugins with git on first start
+Requires:       neovim >= 0.12
+Requires:       git-core
+# Pickers, and nvim-treesitter compiling parsers
+Recommends:     ripgrep
+Recommends:     fd-find
+Recommends:     tree-sitter-cli
+Recommends:     gcc
 
 %description
 Zellij is a workspace aimed at developers, ops-oriented people and anyone who
 loves the terminal. It is a terminal multiplexer with a plugin system that
 lets you build your own layouts and tools in any language that compiles to
 WebAssembly.
+
+The package also installs AstroNvim as the system-wide Neovim configuration,
+which Neovim uses for users who have no ~/.config/nvim/init.lua.
 
 %prep
 %autosetup -n %{name}-%{version} -p1 -a1
@@ -86,6 +100,7 @@ install -Dpm 0644 completion.fish %{buildroot}%{fish_completions_dir}/zellij.fis
 install -Dpm 0644 completion.zsh %{buildroot}%{zsh_completions_dir}/_zellij
 install -Dpm 0644 assets/logo.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/zellij.svg
 desktop-file-install --dir=%{buildroot}%{_datadir}/applications %{SOURCE2}
+install -Dpm 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/xdg/nvim/init.lua
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
@@ -100,8 +115,13 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %{zsh_completions_dir}/_zellij
 %{_datadir}/applications/zellij.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zellij.svg
+%dir %{_sysconfdir}/xdg/nvim
+%config(noreplace) %{_sysconfdir}/xdg/nvim/init.lua
 
 %changelog
+* Fri Nov 06 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-5
+- Install AstroNvim as the system-wide Neovim config
+
 * Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 0.45.1-4
 - Update the vendored openssl-sys crate, for OpenSSL 4 in Fedora 45
 
