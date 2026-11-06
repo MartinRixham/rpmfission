@@ -30,8 +30,8 @@ same day. If you added the repository before these were set, add it again with
 ## Packages
 
 `intel-media-driver` and `mesa-freeworld` are x86_64 only, and
-`avd-fw-freeworld` (Fedora Asahi Remix) and `gstreamer1-plugins-bad-free` are
-aarch64 only. On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video,
+`avd-fw-freeworld` (Fedora Asahi Remix), `gstreamer1-plugins-bad-free` and
+`mesa` are aarch64 only. On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video,
 which Fedora builds for x86_64 only.
 
 | Package | Upstream |
@@ -43,6 +43,7 @@ which Fedora builds for x86_64 only.
 | [ffmpeg8](ffmpeg8/ffmpeg8.spec) (`ffmpeg` 8 for Fedora 44) | https://ffmpeg.org/ |
 | [gstreamer1-plugins-bad-free](gstreamer1-plugins-bad-free/gstreamer1-plugins-bad-free.spec) (Fedora's, with a fix) | https://gstreamer.freedesktop.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
+| [mesa](mesa/mesa.spec) (Fedora's, with a fix; [mesa-fedora44](mesa-fedora44/mesa-fedora44.spec) for Fedora 44) | https://mesa3d.org/ |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
@@ -91,12 +92,14 @@ with `v4l2-ctl --list-devices` from `v4l-utils`.
 
 `gstreamer1-plugins-bad-free` is Fedora's package with a fix to that plugin:
 Fedora's gives the frames the padded size of the decoder's buffers, so
-`videoconvert` squashes 1080p video by 8 lines. It follows Fedora's version
-like `mesa-freeworld`. Fedora's dnf does not change a package's vendor on
-upgrade, so `video-drivers-apple` installs a vendor change policy
-(`/usr/share/dnf5/vendors.d/`) that lets dnf replace Fedora's build with this
-one. With `video-drivers-apple` installed, the next `dnf upgrade` after it
-does so.
+`videoconvert` squashes 1080p video by 8 lines. `mesa` is Fedora's Mesa with a
+fix to Honeykrisp, the Vulkan driver, which misplaced the colour of those
+frames in GTK's Vulkan renderer (a green band across the top in GNOME's video
+player). Both follow Fedora's version like `mesa-freeworld`. Fedora's dnf
+does not change a package's vendor on upgrade, so `video-drivers-apple`
+installs a vendor change policy (`/usr/share/dnf5/vendors.d/rpmfission.conf`)
+that lets dnf replace Fedora's builds with these. With `video-drivers-apple`
+installed, the next `dnf upgrade` after it does so.
 
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is
@@ -195,9 +198,9 @@ and ffmpeg8 do this.
 A spec with a `# rpmfission-follows-fedora: <package>` line follows that Fedora
 package instead: the PR comes when the oldest release in `FEDORA_RELEASES`
 gets a new version of it. `mesa-freeworld` follows `mesa-dri-drivers` this
-way, and `gstreamer1-plugins-bad-free` follows Fedora's own package. Such a
-PR bumps only the version: take Fedora's new spec and redo the changes the
-spec marks.
+way, and `gstreamer1-plugins-bad-free` and `mesa` follow Fedora's own
+packages. Such a PR bumps only the version: take Fedora's new spec and redo
+the changes the spec marks.
 
 ## Repository settings
 

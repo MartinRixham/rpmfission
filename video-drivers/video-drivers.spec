@@ -9,13 +9,13 @@
 
 Name:           video-drivers
 Version:        1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Hardware video acceleration drivers for all supported GPUs
 
 License:        MIT
 
-# dnf vendor change policy for rpmfission's gstreamer1-plugins-bad-free
-Source0:        rpmfission-gstreamer1-plugins-bad-free.conf
+# dnf vendor change policy for rpmfission's builds of Fedora packages
+Source0:        rpmfission.conf
 
 ExclusiveArch:  x86_64 aarch64
 
@@ -104,8 +104,9 @@ Summary:        Hardware video acceleration drivers for Apple Silicon Macs
 # avd-fw, which conflicts with it: "dnf swap avd-fw video-drivers-apple"
 Requires:       avd-fw-freeworld
 # GStreamer's v4l2codecs, the stateless V4L2 decoders that use it. This
-# repository's build fixes it; its vendor change policy lets dnf upgrade
-# Fedora's build to it.
+# repository's build fixes it, as its mesa does Honeykrisp (Vulkan) for the
+# decoded frames; the vendor change policy lets dnf upgrade Fedora's builds
+# to them.
 Recommends:     gstreamer1-plugins-bad-free
 # Reads the vendor change policy
 Requires:       libdnf5 >= 5.3
@@ -121,9 +122,10 @@ v4l2codecs plugin. FFmpeg, and so mpv, Firefox and Chromium, has no support
 for these decoders yet. The firmware is loaded when the driver starts, so
 reboot after installing.
 
-It also lets dnf replace Fedora's gstreamer1-plugins-bad-free with this
-repository's build, which fixes the v4l2codecs plugin for video whose size is
-not aligned, such as 1080p.
+It also lets dnf replace Fedora's gstreamer1-plugins-bad-free and mesa with
+this repository's builds, which fix video whose size is not aligned, such as
+1080p: the v4l2codecs plugin, and the Vulkan driver that GTK draws the frames
+with.
 %endif
 
 %prep
@@ -133,7 +135,7 @@ not aligned, such as 1080p.
 %install
 %ifarch aarch64
 install -D -p -m 0644 %{SOURCE0} \
-    %{buildroot}%{_datadir}/dnf5/vendors.d/rpmfission-gstreamer1-plugins-bad-free.conf
+    %{buildroot}%{_datadir}/dnf5/vendors.d/rpmfission.conf
 %endif
 
 %files
@@ -148,10 +150,14 @@ install -D -p -m 0644 %{SOURCE0} \
 
 %ifarch aarch64
 %files apple
-%{_datadir}/dnf5/vendors.d/rpmfission-gstreamer1-plugins-bad-free.conf
+%{_datadir}/dnf5/vendors.d/rpmfission.conf
 %endif
 
 %changelog
+* Fri Nov 06 2026 Martin Rixham <martin.rixham@gmail.com> - 1-4
+- video-drivers-apple: the vendor change policy also covers mesa, now
+  rpmfission.conf
+
 * Thu Nov 05 2026 Martin Rixham <martin.rixham@gmail.com> - 1-3
 - video-drivers-apple: add a dnf vendor change policy, so that dnf upgrades
   Fedora's gstreamer1-plugins-bad-free to this repository's build

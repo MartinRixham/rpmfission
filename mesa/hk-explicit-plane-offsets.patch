@@ -1,0 +1,129 @@
+From 10c96afb7fd727dd5f4e3e98417f19ca4bb61f27 Mon Sep 17 00:00:00 2001
+From: Martin Rixham <martin.rixham@gmail.com>
+Date: Fri, 6 Nov 2026 00:12:13 +0000
+Subject: [PATCH] hk: honour the plane offsets of explicit DRM format modifier
+ layouts
+
+hk_image_init took only the row pitch from
+VkImageDrmFormatModifierExplicitCreateInfoEXT::pPlaneLayouts, and binding
+always packed the planes one after another. When an imported dmabuf has
+padding between its planes the second plane was read from the wrong place.
+
+V4L2 video decoders align the height of their buffers to the macroblock
+size, so the chroma plane of 1920x1080 NV12 starts after 1088 rows of luma.
+GTK imports such frames with their real offsets, but the chroma was read
+8 rows early: a green band across the top of the video and colour bleeding
+down the picture, in GNOME's video player with the Apple video decoder.
+
+Keep the explicit offset of each plane, relative to the image's memory
+binding (or the plane's, for a disjoint image) as the spec says, and use
+it when binding, for the memory requirements and in the subresource
+layout. Offsets the hardware cannot use are rejected with
+VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/asahi/vulkan/hk_image.c | 37 ++++++++++++++++++++++++++++++++-----
+ src/asahi/vulkan/hk_image.h |  7 +++++++
+ 2 files changed, 39 insertions(+), 5 deletions(-)
+
+diff --git a/src/asahi/vulkan/hk_image.c b/src/asahi/vulkan/hk_image.c
+index 3136557..7008804 100644
+--- a/src/asahi/vulkan/hk_image.c
++++ b/src/asahi/vulkan/hk_image.c
+@@ -879,6 +879,19 @@ hk_image_init(struct hk_device *dev, struct hk_image *image,
+           image->vk.drm_format_mod == DRM_FORMAT_MOD_LINEAR)
+          linear_stride_B = mod_explicit_info->pPlaneLayouts[plane].rowPitch;
+ 
++      /* An imported dmabuf can have padding between its planes, such as the
++       * rows a video decoder aligns the picture height to, so the planes must
++       * go where the application says rather than be packed.
++       */
++      image->planes[plane].explicit_offset_B = -1;
++      if (mod_explicit_info) {
++         uint64_t offset_B = mod_explicit_info->pPlaneLayouts[plane].offset;
++         if (offset_B % HK_PLANE_ALIGN_B)
++            return VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT;
++
++         image->planes[plane].explicit_offset_B = offset_B;
++      }
++
+       bool compressed =
+          hk_map_compression(dev, pCreateInfo, plane, image->vk.drm_format_mod);
+ 
+@@ -1037,6 +1050,12 @@ hk_image_plane_add_req(struct hk_image_plane *plane, bool sparse,
+    assert(util_is_power_of_two_or_zero64(plane_align_B));
+ 
+    *align_B = MAX2(*align_B, plane_align_B);
++
++   if (plane->explicit_offset_B >= 0) {
++      *size_B = MAX2(*size_B, plane->explicit_offset_B + plane->layout.size_B);
++      return;
++   }
++
+    *size_B = align64(*size_B, plane_align_B);
+    *size_B += plane->layout.size_B;
+ }
+@@ -1246,7 +1265,9 @@ hk_get_image_subresource_layout(UNUSED struct hk_device *dev,
+    const struct hk_image_plane *plane = &image->planes[p];
+ 
+    uint64_t offset_B = 0;
+-   if (!image->disjoint) {
++   if (plane->explicit_offset_B >= 0) {
++      offset_B = plane->explicit_offset_B;
++   } else if (!image->disjoint) {
+       uint32_t align_B = 0;
+       /* TODO: sparse? */
+       for (unsigned plane = 0; plane < p; plane++)
+@@ -1315,9 +1336,13 @@ hk_GetDeviceImageSubresourceLayoutKHR(
+ 
+ static void
+ hk_image_plane_bind(struct hk_device *dev, struct hk_image_plane *plane,
+-                    struct hk_device_memory *mem, uint64_t *offset_B)
++                    struct hk_device_memory *mem, uint64_t bind_offset_B,
++                    uint64_t *offset_B)
+ {
+-   *offset_B = align64(*offset_B, HK_PLANE_ALIGN_B);
++   if (plane->explicit_offset_B >= 0)
++      *offset_B = bind_offset_B + plane->explicit_offset_B;
++   else
++      *offset_B = align64(*offset_B, HK_PLANE_ALIGN_B);
+ 
+    if (plane->va) {
+ #if 0
+@@ -1367,10 +1392,12 @@ hk_BindImageMemory2(VkDevice device, uint32_t bindInfoCount,
+             pBindInfos[i].pNext, BIND_IMAGE_PLANE_MEMORY_INFO);
+          uint8_t plane =
+             hk_image_aspects_to_plane(image, plane_info->planeAspect);
+-         hk_image_plane_bind(dev, &image->planes[plane], mem, &offset_B);
++         hk_image_plane_bind(dev, &image->planes[plane], mem,
++                             pBindInfos[i].memoryOffset, &offset_B);
+       } else {
+          for (unsigned plane = 0; plane < image->plane_count; plane++) {
+-            hk_image_plane_bind(dev, &image->planes[plane], mem, &offset_B);
++            hk_image_plane_bind(dev, &image->planes[plane], mem,
++                                pBindInfos[i].memoryOffset, &offset_B);
+          }
+       }
+ 
+diff --git a/src/asahi/vulkan/hk_image.h b/src/asahi/vulkan/hk_image.h
+index a28add8..15da5e8 100644
+--- a/src/asahi/vulkan/hk_image.h
++++ b/src/asahi/vulkan/hk_image.h
+@@ -54,6 +54,13 @@ struct hk_image_plane {
+    uint64_t addr;
+    struct agx_va *va;
+ 
++   /* Offset of the plane from the start of its memory binding (the image's
++    * binding, or the plane's for a disjoint image), when the application gave
++    * an explicit layout with VkImageDrmFormatModifierExplicitCreateInfoEXT.
++    * Otherwise -1, and the planes are packed one after another.
++    */
++   int64_t explicit_offset_B;
++
+    /* For host image copy */
+    void *map;
+    uint32_t rem;
+-- 
+2.56.0
+
