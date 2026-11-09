@@ -30,8 +30,8 @@ same day. If you added the repository before these were set, add it again with
 ## Packages
 
 `intel-media-driver` and `mesa-freeworld` are x86_64 only, and
-`avd-fw-freeworld` (Fedora Asahi Remix), `gstreamer1-plugins-bad-free` and
-`mesa` are aarch64 only. On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video,
+`avd-fw-freeworld` and `fairydust-kernel` (Fedora Asahi Remix),
+`gstreamer1-plugins-bad-free` and `mesa` are aarch64 only. On aarch64, `ffmpeg` has no libvmaf or Intel Quick Sync Video,
 which Fedora builds for x86_64 only.
 
 | Package | Upstream |
@@ -39,6 +39,7 @@ which Fedora builds for x86_64 only.
 | [avd-fw-freeworld](avd-fw-freeworld/avd-fw-freeworld.spec) | https://github.com/AsahiLinux/avd-fw |
 | [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/gnome-notes |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
+| [fairydust-kernel](fairydust-kernel/fairydust-kernel.spec) (Asahi's `kernel-16k`, with DisplayPort over USB-C) | https://github.com/AsahiLinux/linux |
 | [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
 | [ffmpeg8](ffmpeg8/ffmpeg8.spec) (`ffmpeg` 8 for Fedora 44) | https://ffmpeg.org/ |
 | [gstreamer1-plugins-bad-free](gstreamer1-plugins-bad-free/gstreamer1-plugins-bad-free.spec) (Fedora's, with a fix) | https://gstreamer.freedesktop.org/ |
@@ -100,6 +101,50 @@ does not change a package's vendor on upgrade, so `video-drivers-apple`
 installs a vendor change policy (`/usr/share/dnf5/vendors.d/rpmfission.conf`)
 that lets dnf replace Fedora's builds with these. With `video-drivers-apple`
 installed, the next `dnf upgrade` after it does so.
+
+### DisplayPort over USB-C on Apple Silicon
+
+`fairydust-kernel` swaps Fedora Asahi Remix's 16K kernel (`kernel-16k`) for
+the same kernel with the patches of Asahi's `fairydust` branch, which give
+the front-left USB-C port of the MacBook Air 13" and 15" (M2) and MacBook Pro
+13" (M2) DisplayPort output, with audio and hotplug. No other port carries
+video. The patches are Asahi's work in progress, by their own account hacks,
+and the port's power domain stays on, which costs some battery life at idle.
+m1n1, the bootloader stage that hands the device tree to the kernel, stays
+Fedora's: it reserves the firmware of the display coprocessor the port uses
+on M2 Macs from 1.9.9, the version Fedora ships, at least.
+
+```sh
+sudo dnf install fairydust-kernel
+```
+
+This installs the fairydust kernel as `fairydust-kernel-16k`, beside
+Asahi's `kernel-16k`, which keeps coming from Asahi. It becomes the default
+boot entry, and `/boot/efi/m1n1/boot.bin`, m1n1 stage 2, is rebuilt with its
+device trees. It stays the default when Asahi's kernel is updated:
+`fairydust-kernel` sets it back after every transaction that installs a
+kernel. Reboot to start it; `uname -r` then ends in
+`.fairydust.fc44.aarch64+16k`. To swap back:
+
+```sh
+sudo dnf remove fairydust-kernel
+```
+
+This makes Asahi's newest 16K kernel the default again and rebuilds
+`boot.bin` with its device trees. dnf also removes the `fairydust-kernel-16k`
+packages it installed with it. If it keeps the running kernel, reboot into
+Asahi's and run `sudo dnf autoremove`.
+
+m1n1 runs before GRUB, so a broken `boot.bin` can only be fixed from macOS
+recovery: keep a copy of it first. For the same reason, picking the other
+kind of kernel in GRUB boots it with the default kernel's device trees.
+
+The fairydust kernel must be rebuilt for each Asahi kernel. A build older
+than Asahi's newest is not published (see
+`fairydust-kernel/tests/30-newer-than-asahi.sh`); see the top of
+`fairydust-kernel/fairydust-kernel.spec` for the update. The debug kernel,
+debuginfo, `kernel-headers` and the tools are not built, and Asahi's stay in
+use.
 
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is
@@ -172,6 +217,19 @@ through `qemu-user-static`, but slowly.
 
 - Only `main` publishes. Builds of other branches keep their RPMs as
   workflow artifacts.
+- A package with a `tests/` directory is tested after both build stages: each
+  executable file in it runs in a container of the chroot's release, on a
+  runner of its architecture (see `.github/scripts/run-tests.sh`). Tests get
+  the run's RPMs for the chroot as a dnf repository ahead of the published
+  one. A package whose tests do not all pass is not published for that chroot.
+  To run them locally, give the script a directory of RPMs, as root in a
+  Fedora container:
+  `podman run --rm -v $PWD:/r -v ./rpms:/rpms -w /r fedora:44 .github/scripts/run-tests.sh fairydust-kernel fedora-44-aarch64 /rpms`.
+  `fairydust-kernel` checks the device trees for DisplayPort over USB-C, the modules and
+  the USB-C driver's hotplug patch, that it is at least as new as Asahi's kernel,
+  boots it in QEMU with 16K pages, and installs and removes it beside Asahi's
+  kernel to check the swap of the default boot entry and m1n1's device trees.
+  They cannot test the hardware.
 
 ## Upstream updates
 

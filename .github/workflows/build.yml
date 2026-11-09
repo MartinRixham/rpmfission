@@ -34,6 +34,7 @@ jobs:
     outputs:
       builds: ${{ steps.builds.outputs.builds }}
       builds-with-repo: ${{ steps.builds.outputs.builds-with-repo }}
+      tests: ${{ steps.builds.outputs.tests }}
     steps:
       # git before checkout, or it downloads the tree without history
       - name: Install tools
@@ -132,6 +133,17 @@ jobs:
           echo "builds=$(jq -c 'map(select(.with_repo | not) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
           echo "builds-with-repo=$(jq -c 'map(select(.with_repo) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
 
+          # Builds of packages with a tests/ directory (see
+          # .github/scripts/run-tests.sh), with the release for the container
+          tests=$(
+            for package in $(jq -r '.[].package' <<< "$builds" | sort -u); do
+              if [ -d "$package/tests" ]; then echo "$package"; fi
+            done | jq -Rsc 'split("\n") | map(select(. != ""))'
+          )
+          echo "tests=$(jq -c --argjson tested "$tests" \
+            'map(select(.package as $p | $tested | index($p)) | del(.with_repo) |
+                 .release = (.chroot | split("-")[1]))' <<< "$builds")" >> "$GITHUB_OUTPUT"
+
   build:
     needs: plan
     if: needs.plan.outputs.builds != '[]'
@@ -150,9 +162,60 @@ jobs:
       builds: ${{ needs.plan.outputs.builds-with-repo }}
       with-repo: true
 
-  publish:
+  # Runs each built package's tests (<pkg>/tests/, see
+  # .github/scripts/run-tests.sh) in a container of the chroot's release, on a
+  # runner of its architecture, against the RPMs of both build stages. A pass
+  # leaves a tested-<pkg>-<chroot> artifact, without which publish leaves out
+  # that package's RPMs for the chroot.
+  test:
     needs: [plan, build, build-with-repo]
-    # Publish whatever built, even if some packages in the matrix failed.
+    if: >-
+      !cancelled() && needs.plan.result == 'success' &&
+      needs.plan.outputs.tests != '[]'
+    runs-on: ${{ endsWith(matrix.chroot, '-aarch64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.tests) }}
+    container:
+      image: registry.fedoraproject.org/fedora:${{ matrix.release }}
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: rpms-${{ matrix.package }}-${{ matrix.chroot }}
+          path: own
+        # A package that failed to build has nothing to test or publish
+        continue-on-error: true
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: rpms-*
+          merge-multiple: true
+          path: run
+
+      - name: Run tests
+        id: tests
+        if: hashFiles('own/**/*.rpm') != ''
+        env:
+          REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          .github/scripts/run-tests.sh ${{ matrix.package }} ${{ matrix.chroot }} run/${{ matrix.chroot }}
+          mkdir -p tested
+          touch tested/${{ matrix.package }}-${{ matrix.chroot }}
+
+      - if: steps.tests.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tested-${{ matrix.package }}-${{ matrix.chroot }}
+          path: tested/
+
+  publish:
+    needs: [plan, build, build-with-repo, test]
+    # Publish whatever built, even if some packages in the matrix failed, but
+    # not the RPMs of a package whose tests did not pass.
     # Only main publishes; other branches, such as update PRs, only build.
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
@@ -172,11 +235,33 @@ jobs:
 
       - uses: actions/checkout@v7
 
+      # One directory per artifact, rpms-<pkg>-<chroot>, to tell the packages
+      # apart
       - uses: actions/download-artifact@v7
         with:
           pattern: rpms-*
+          path: built
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: tested-*
           merge-multiple: true
-          path: new
+          path: tested
+
+      - name: Leave out untested RPMs
+        run: |
+          mkdir -p new
+          for dir in built/rpms-*; do
+            [ -d "$dir" ] || continue
+            name=${dir#built/rpms-}
+            chroot=$(grep -oE 'fedora-[0-9]+-[a-z0-9_]+$' <<< "$name")
+            package=${name%-"$chroot"}
+            if [ -d "$package/tests" ] && [ ! -e "tested/$package-$chroot" ]; then
+              echo "::warning::$package for $chroot not published: its tests did not pass"
+              continue
+            fi
+            cp -a "$dir"/. new/
+          done
 
       - name: Update repository
         env:

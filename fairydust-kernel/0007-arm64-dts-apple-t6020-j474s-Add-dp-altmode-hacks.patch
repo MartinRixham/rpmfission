@@ -1,0 +1,42 @@
+From f27a6ef22caef10de46424c824f1216d0b59876f Mon Sep 17 00:00:00 2001
+From: Janne Grunau <j@jannau.net>
+Date: Sat, 5 Nov 2022 21:22:50 +0100
+Subject: [PATCH 07/11] arm64: dts: apple: t6020-j474s: Add dp-altmode hacks
+
+DP alt mode for Mac Mini M2 Pro, the blessed port is the back right
+middle port (second closest USB-C port to the power connector).
+
+Signed-off-by: Janne Grunau <j@jannau.net>
+---
+ arch/arm64/boot/dts/apple/t6020-j474s.dts | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/apple/t6020-j474s.dts b/arch/arm64/boot/dts/apple/t6020-j474s.dts
+index 936bd4210a86..609421212188 100644
+--- a/arch/arm64/boot/dts/apple/t6020-j474s.dts
++++ b/arch/arm64/boot/dts/apple/t6020-j474s.dts
+@@ -9,6 +9,8 @@
+ 
+ /dts-v1/;
+ 
++#define ENABLE_DCPEXT_TYPEC
++
+ #include "t6020.dtsi"
+ 
+ /*
+@@ -85,7 +87,12 @@
+ 	status = "disabled";
+ };
+ &display {
++#ifdef ENABLE_DCPEXT_TYPEC
++	iommus = <&dispext0_dart 0 0x100 0x0 0x10 0x0>,
++		 <&dispext1_dart 0 0x100 0x0 0x10 0x0>;
++#else
+ 	iommus = <&dispext0_dart 0 0x100 0x0 0x10 0x0>;
++#endif
+ };
+ &dispext0_dart {
+ 	status = "okay";
+-- 
+2.56.0
+
