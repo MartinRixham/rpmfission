@@ -13,7 +13,7 @@
 # The version must be exactly that of Fedora's mesa, as the library is shared
 # with it (hence the Requires on mesa-filesystem). A newer Fedora mesa cannot
 # be installed until this package is rebuilt at that version; the update
-# workflow opens a pull request for that (see .github/scripts/check-updates.sh).
+# workflow opens an issue for that (see .github/scripts/check-updates.sh).
 #
 # rpmfission-follows-fedora: mesa-dri-drivers
 

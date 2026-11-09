@@ -175,12 +175,10 @@ through `qemu-user-static`, but slowly.
 A daily workflow (`.github/workflows/update.yml`) checks the upstream GitHub
 repository of each package, the first `github.com/<owner>/<repo>` in the
 spec's `URL` or `Source` fields. When the latest release (not a draft or
-pre-release) is newer than the spec's `Version`, it opens a pull request on
-`update/<name>-<version>`. The PR bumps `Version`, resets `Release`, adds a
-changelog entry and refreshes `sources`, and the build workflow runs on its
-branch. Patches, `License:` and anything else the release changes are left to
-review. A version whose branch already exists is not offered again, so to skip
-a release, close its PR and keep the branch. Packages with no GitHub releases,
+pre-release) is newer than the spec's `Version`, it keeps an issue titled
+`<name>: newer version available` open, with a checklist for the update, and
+the workflow run fails. The issue closes itself once the spec is up to date.
+Packages with no GitHub releases,
 such as tui-torrent, are skipped, as are those hosted elsewhere: bijiben,
 ffmpeg, ffmpeg8, x264 and x265 are updated by hand. bijiben's tarball is made from its
 git tag by `sources.sh`, so a bump changes the `tag` and `commit` at the top of
@@ -191,19 +189,17 @@ A spec that carries Fedora's patches for a package names it on a
 `# rpmfission-fedora-patches: <package>` line. The same workflow compares the
 spec's patches, by file name, with those of Fedora's spec for each release the
 spec builds for, and keeps an issue open for each that differs, such as when
-Fedora backports a fix. Fedora patches left out on purpose go on
-`# rpmfission-fedora-patches-ignore:` lines, with a comment saying why. ffmpeg
-and ffmpeg8 do this.
+Fedora backports a fix, failing the workflow run meanwhile. Fedora patches
+left out on purpose go on `# rpmfission-fedora-patches-ignore:` lines, with a
+comment saying why. ffmpeg and ffmpeg8 do this.
 
 A spec with a `# rpmfission-follows-fedora: <package>` line follows that Fedora
-package instead: the PR comes when the oldest release in `FEDORA_RELEASES`
+package instead: the issue comes when the oldest release in `FEDORA_RELEASES`
 gets a new version of it. `mesa-freeworld` follows `mesa-dri-drivers` this
 way, and `gstreamer1-plugins-bad-free` and `mesa` follow Fedora's own
-packages. Such a PR bumps only the version: take Fedora's new spec and redo
-the changes the spec marks.
+packages. To update one, take Fedora's new spec and redo the changes the spec
+marks.
 
 ## Repository settings
 
 - GitHub Pages must deploy from the `gh-pages` branch.
-- Actions must be allowed to create pull requests (Settings → Actions →
-  General → "Allow GitHub Actions to create and approve pull requests").

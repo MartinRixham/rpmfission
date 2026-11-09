@@ -21,6 +21,8 @@
 # or updates the body of the open one; once the patches match again the issue
 # is closed. With DRY_RUN=1 the differences are only printed.
 #
+# Exits 1 if any package's patches differ or could not be compared.
+#
 # Environment: GH_TOKEN and GH_REPO, unless DRY_RUN=1.
 set -euo pipefail
 
@@ -76,7 +78,8 @@ for spec in */*.spec; do
         if [ -z "$missing$extra" ]; then
             echo "$pkg: patches match Fedora $release ($fedora_pkg $fedora_version)"
         else
-            echo "$pkg: patches differ from Fedora $release ($fedora_pkg $fedora_version)"
+            echo "::error::$pkg: patches differ from Fedora $release ($fedora_pkg $fedora_version)"
+            status=1
             [ -z "$missing" ] || sed 's/^/  only in Fedora: /' <<< "$missing"
             [ -z "$extra" ] || sed 's/^/  only here: /' <<< "$extra"
         fi

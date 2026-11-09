@@ -1,6 +1,6 @@
 #!/bin/bash
-# Open a pull request for each package whose upstream GitHub repository has a
-# newer release than the spec's Version.
+# Keep an issue open for each package whose upstream GitHub repository has a
+# newer release than the spec's Version, and fail while any is out of date.
 #
 #   check-updates.sh                  check every package
 #   check-updates.sh <pkg/pkg.spec>   check one package
@@ -16,25 +16,29 @@
 # FEDORA_RELEASES (in build.yml), as mesa-freeworld must match Fedora's mesa
 # exactly.
 #
-# The update branch is update/<pkg>-<version>. A version whose branch already
-# exists is not offered again, so closing a PR without deleting its branch
-# skips that version.
+# A newer version opens an issue titled "<pkg>: newer version available", or
+# updates the body of the open one; once the spec is up to date the issue is
+# closed. With DRY_RUN=1 the versions are only printed.
 #
-# The PR bumps Version, resets Release, adds a changelog entry and refreshes
-# the "sources" checksums, then runs the build workflow on the branch.
+# Exits 1 if any package is out of date or could not be checked.
 #
-# Environment: GH_TOKEN, and a git identity for the commit.
+# Environment: GH_TOKEN and GH_REPO, unless DRY_RUN=1.
 set -euo pipefail
 
+# Exit status of a single-package check that found a newer version
+outdated=3
+
 if [ $# -eq 0 ]; then
-    base=$(git rev-parse HEAD)
     status=0
     for spec in */*.spec; do
-        git checkout -q --force --detach "$base"
         # A child process, so that set -e applies within each package
-        "$0" "$spec" || { echo "::error::$(dirname "$spec"): update check failed"; status=1; }
+        rc=0
+        "$0" "$spec" || rc=$?
+        if [ "$rc" -ne 0 ]; then
+            [ "$rc" -eq "$outdated" ] || echo "::error::$(dirname "$spec"): update check failed"
+            status=1
+        fi
     done
-    git checkout -q --force --detach "$base"
     exit "$status"
 fi
 
@@ -88,72 +92,51 @@ if ! [[ $version =~ ^[0-9][A-Za-z0-9._+~^]*$ ]]; then
     exit 0
 fi
 
-# rpmdev-vercmp exits 11 when the first version is newer
+# rpmdev-vercmp exits 0 when the versions are equal, 11 when the first is
+# newer and 12 when the second is
 rc=0
 rpmdev-vercmp "$version" "$current" > /dev/null || rc=$?
-if [ "$rc" -ne 11 ]; then
-    echo "$pkg: $current is up to date (latest: $tag)"
+case $rc in
+    11)
+        echo "::error::$pkg: $current is out of date (latest: $tag)"
+        result=$outdated
+        ;;
+    0|12)
+        echo "$pkg: $current is up to date (latest: $tag)"
+        result=0
+        ;;
+    *) exit 1 ;;
+esac
+[ "${DRY_RUN:-0}" = 1 ] && exit "$result"
+
+title="$pkg: newer version available"
+issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title \
+    --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+if [ "$result" -eq 0 ]; then
+    if [ -n "$issue" ]; then
+        gh issue close "$issue" --comment "\`$spec\` is at $current, the latest version."
+    fi
     exit 0
 fi
 
-branch=update/$pkg-$version
-# Exit status 2 means no such branch; anything else but 0 is a failure
-rc=0
-git ls-remote --exit-code --heads origin "$branch" > /dev/null || rc=$?
-case $rc in
-    0) echo "$pkg: branch $branch already exists, skipping"; exit 0 ;;
-    2) ;;
-    *) exit "$rc" ;;
-esac
-echo "$pkg: updating $current -> $version"
-
-git switch -q -c "$branch"
-
-sed -i -E \
-    -e "s/^(Version:[[:space:]]+).*/\\1$version/" \
-    -e 's/^(Release:[[:space:]]+)[0-9.]+/\11/' \
-    "$spec"
-
-entry=$(mktemp)
-{
-    echo "* $(LC_ALL=C date -u '+%a %b %d %Y') $(git config user.name) <$(git config user.email)> - $version-1"
-    echo "- Update to $version"
-    echo
-} > "$entry"
-sed -i "/^%changelog\$/r $entry" "$spec"
-
-# Checksums of the remote sources at the new version. Generated sources such
-# as vendored crates are made from these during the SRPM build.
-dl=$(mktemp -d)
-spectool --get-files --sourcedir --define "_sourcedir $dl" "$spec"
-files=()
-for source in $(spectool --list-files "$spec" | awk '{print $2}' | grep '://'); do
-    files+=("$(basename "$source")")
-done
-if [ ${#files[@]} -gt 0 ]; then
-    (cd "$dl" && sha512sum --tag "${files[@]}") > "$pkg/sources"
-fi
-
-git add "$pkg"
-git commit -q -m "$pkg: update to $version"
-git push -q origin "$branch"
-
-# Pushes and pull requests made with the workflow token do not trigger other
-# workflows, but a dispatch does. Before the pull request, so that the branch
-# builds even if opening it fails.
-gh workflow run build.yml --ref "$branch" -f packages="$pkg"
-
 body=$(cat <<EOF
-Upstream: $url
-
-Automated update of \`$pkg\` from $current to $version. Version, Release,
-the changelog and \`sources\` are updated; the rest needs a person:
+\`$spec\` is at $current; upstream has [$tag]($url), version $version.
 
 - [ ] Read the release notes for changed build steps, dependencies or files
-- [ ] The build passes (the build workflow runs on this branch), including
-      the patches applying
+- [ ] Bump \`Version\`, reset \`Release\` and add a changelog entry
+- [ ] Refresh the checksums in \`$pkg/sources\` (\`spectool -g\`, then
+      \`sha512sum --tag\` of the downloaded files)
+- [ ] The build passes, including the patches applying
 - [ ] \`License:\` matches \`%cargo_license_summary\` in the build log
+
+This issue closes itself once the spec is up to date. See
+\`.github/scripts/check-updates.sh\`.
 EOF
 )
-gh pr create --base main --head "$branch" \
-    --title "$pkg: update to $version" --body "$body"
+if [ -n "$issue" ]; then
+    gh issue edit "$issue" --body "$body" > /dev/null
+    echo "$pkg: updated issue #$issue"
+else
+    gh issue create --title "$title" --body "$body"
+fi
+exit "$result"

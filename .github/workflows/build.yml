@@ -3,10 +3,7 @@ name: Build RPMs
 on:
   push:
     branches: [main]
-  # Builds the packages a pull request changes, without publishing. Pull
-  # requests opened by the update workflow do not trigger this (see
-  # .github/scripts/check-updates.sh, which dispatches their build), but
-  # later pushes to their branches do.
+  # Builds the packages a pull request changes, without publishing.
   pull_request:
     branches: [main]
   workflow_dispatch:

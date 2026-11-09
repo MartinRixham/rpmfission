@@ -1,12 +1,10 @@
 name: Check upstream releases
 
-# Opens a pull request for each package whose upstream GitHub repository has a
-# newer release (see .github/scripts/check-updates.sh), and an issue for each
-# package whose patches differ from those of the Fedora package it takes them
-# from (see .github/scripts/check-fedora-patches.sh).
-#
-# Requires "Allow GitHub Actions to create and approve pull requests" in the
-# repository's Actions settings.
+# Keeps an issue open for each package whose upstream GitHub repository has a
+# newer release (see .github/scripts/check-updates.sh), and for each package
+# whose patches differ from those of the Fedora package it takes them from
+# (see .github/scripts/check-fedora-patches.sh). The run fails while any such
+# difference remains.
 
 on:
   schedule:
@@ -23,33 +21,21 @@ jobs:
     container:
       image: registry.fedoraproject.org/fedora:latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       issues: write
-      # To run the build workflow on the update branch
-      actions: write
     steps:
       - name: Install tools
         run: dnf -y install git gh jq rpmdevtools rpm-build cargo-rpm-macros
 
       - uses: actions/checkout@v7
 
-      - name: Open update pull requests
+      - name: Check upstream versions
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          GIT_AUTHOR_NAME: github-actions[bot]
-          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions[bot]
-          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-        # The container runs as root but the checkout is owned by the runner
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config --global user.name "$GIT_AUTHOR_NAME"
-          git config --global user.email "$GIT_AUTHOR_EMAIL"
-          .github/scripts/check-updates.sh
+        run: .github/scripts/check-updates.sh
 
-      # Even if an update pull request failed
+      # Even if a package is out of date
       - name: Compare patches with Fedora's
         if: ${{ !cancelled() }}
         env:

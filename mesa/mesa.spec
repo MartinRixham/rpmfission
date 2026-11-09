@@ -10,8 +10,8 @@
 # need Fedora's dist-git history), and aarch64 only. It keeps Fedora's
 # package names, so it replaces Fedora's build, subpackages included, and the
 # repository's priority makes dnf take it even when Fedora's is newer. So it
-# must follow Fedora's version, which the update workflow opens a pull
-# request for. On an update, take Fedora's new spec from the f45 branch and
+# must follow Fedora's version, which the update workflow opens an issue
+# for. On an update, take Fedora's new spec from the f45 branch and
 # redo the changes marked "rpmfission". mesa-fedora44/ has Fedora 44's.
 #
 # rpmfission-fedora: >= 45
