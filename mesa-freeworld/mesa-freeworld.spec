@@ -24,8 +24,8 @@
 %global _lto_cflags %{nil}
 
 Name:           mesa-freeworld
-Version:        26.2.5
-Release:        2%{?dist}
+Version:        26.2.6
+Release:        1%{?dist}
 Summary:        Mesa VA-API drivers with all video codecs
 
 License:        MIT AND BSD-3-Clause AND SGI-B-2.0
@@ -214,6 +214,9 @@ fi
 %{_libdir}/dri-freeworld/virtio_gpu_drv_video.so
 
 %changelog
+* Mon Nov 09 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.6-1
+- Update to 26.2.6 upstream release
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.5-2
 - Make GStreamer rescan its va plugin when the drivers are installed or removed
 
