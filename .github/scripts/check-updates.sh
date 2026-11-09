@@ -138,6 +138,11 @@ git add "$pkg"
 git commit -q -m "$pkg: update to $version"
 git push -q origin "$branch"
 
+# Pushes and pull requests made with the workflow token do not trigger other
+# workflows, but a dispatch does. Before the pull request, so that the branch
+# builds even if opening it fails.
+gh workflow run build.yml --ref "$branch" -f packages="$pkg"
+
 body=$(cat <<EOF
 Upstream: $url
 
@@ -152,7 +157,3 @@ EOF
 )
 gh pr create --base main --head "$branch" \
     --title "$pkg: update to $version" --body "$body"
-
-# Pull requests opened with the workflow token do not trigger other
-# workflows, but a dispatch does
-gh workflow run build.yml --ref "$branch" -f packages="$pkg"

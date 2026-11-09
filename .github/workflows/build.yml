@@ -3,6 +3,12 @@ name: Build RPMs
 on:
   push:
     branches: [main]
+  # Builds the packages a pull request changes, without publishing. Pull
+  # requests opened by the update workflow do not trigger this (see
+  # .github/scripts/check-updates.sh, which dispatches their build), but
+  # later pushes to their branches do.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       packages:
@@ -57,7 +63,8 @@ jobs:
       - id: builds
         env:
           REQUESTED: ${{ inputs.packages }}
-          BEFORE: ${{ github.event.before }}
+          # The base branch for a pull request, whose merge commit is GITHUB_SHA
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           # The container runs as root but the checkout is owned by the runner
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
