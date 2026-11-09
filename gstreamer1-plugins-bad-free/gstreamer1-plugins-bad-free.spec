@@ -48,7 +48,7 @@
 #global shortcommit %(c=%{gitcommit}; echo ${c:0:5})
 
 Name:           gstreamer1-plugins-bad-free
-Version:        1.28.8
+Version:        1.28.9
 # rpmfission: suffix, newer than Fedora's build of the same Release
 Release:        1%{?dist}.1
 Summary:        GStreamer streaming media framework "bad" plugins
@@ -956,6 +956,9 @@ EOF
 
 
 %changelog
+* Mon Nov 09 2026 github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com> - 1.28.9-1
+- Update to 1.28.9
+
 * Thu Nov 05 2026 Martin Rixham <martin.rixham@gmail.com> - 1.28.8-1.1
 - v4l2codecs: give output buffers the display size, so that videoconvert
   does not squash video whose size is not aligned (1080p by 8 lines)
