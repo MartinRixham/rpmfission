@@ -37,7 +37,7 @@
 
 Name:           ffmpeg
 Version:        8.1.3
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -60,6 +60,10 @@ Patch1:         ffmpeg-allow-fdk-aac-free.patch
 # Fedora and RPM Fusion)
 # https://github.com/FFmpeg/FFmpeg/commit/25e187f8494966377a4b9d077260ce7b501a911c
 Patch2:         ffmpeg-vulkan-direct-export.patch
+# Backward seeking in H.264 with openh264 (from Fedora)
+# https://bugzilla.redhat.com/show_bug.cgi?id=2547586
+# https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/883e8a6336b2651f7be79a6a9aa5f3cc22937948
+Patch3:         ffmpeg-openh264-flush-callback.patch
 
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Requires:       libavdevice%{?_isa} = %{version}-%{release}
@@ -492,6 +496,9 @@ fi
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Mon Nov 09 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-4
+- Fix backward seeking in H.264 decoded with openh264 (from Fedora)
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-3
 - Make GStreamer rescan gst-libav when the libraries are installed or removed
 
