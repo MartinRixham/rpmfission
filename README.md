@@ -160,12 +160,15 @@ through `qemu-user-static`, but slowly.
 - Every package is built for each Fedora release in `FEDORA_RELEASES` at the
   top of `.github/workflows/build.yml`. A release whose chroot is not yet on
   `gh-pages` gets every package. Add a release when it branches or ships, and
-  remove it at end of life. Its chroot is then deleted from `gh-pages` on the
-  next publish.
-- Built binary RPMs are added to the `gh-pages` branch. The two newest builds
-  of each package are kept, and the branch is force-pushed as a single commit.
-  SRPMs and debuginfo packages are too large for git. They are kept only as
-  workflow artifacts, along with the mock logs.
+  remove it at end of life. Its chroot is then deleted from `gh-pages`, and
+  its release, on the next publish.
+- Built binary RPMs are uploaded to a GitHub release per chroot, tagged with
+  the chroot's name, such as `fedora-45-x86_64`. The two newest builds of each
+  package are kept. The repository metadata, `.repo` file and key are on the
+  `gh-pages` branch, force-pushed as a single commit, and the metadata points
+  dnf at the release assets: GitHub Pages times out deploying the RPMs
+  themselves. SRPMs and debuginfo packages are kept only as workflow
+  artifacts, along with the mock logs.
 
 - Only `main` publishes. Builds of other branches keep their RPMs as
   workflow artifacts.

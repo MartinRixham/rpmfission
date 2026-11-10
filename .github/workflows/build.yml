@@ -168,7 +168,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Install tools
-        run: dnf -y install git createrepo_c dnf5-plugins jq gnupg2 rpm-sign
+        run: dnf -y install git createrepo_c dnf5-plugins jq gnupg2 rpm-sign gh
 
       - uses: actions/checkout@v7
 
@@ -182,6 +182,9 @@ jobs:
         env:
           REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
           REPO_NAME: ${{ github.event.repository.name }}
+          # The RPMs are assets of a release per chroot
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
           # ASCII-armoured secret key without a passphrase, from
           # gpg --export-secret-keys --armor
           SIGNING_KEY: ${{ secrets.RPM_SIGNING_KEY }}
