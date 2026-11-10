@@ -37,7 +37,7 @@
 
 Name:           ffmpeg
 Version:        8.1.3
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -64,6 +64,10 @@ Patch2:         ffmpeg-vulkan-direct-export.patch
 # https://bugzilla.redhat.com/show_bug.cgi?id=2547586
 # https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/883e8a6336b2651f7be79a6a9aa5f3cc22937948
 Patch3:         ffmpeg-openh264-flush-callback.patch
+# Build with openapv 1.1, whose oapvm_create() takes a descriptor (from
+# Fedora)
+# https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/0880196367273612c3113279438b4b999045d123
+Patch4:         ffmpeg-openapv1.1.patch
 
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Requires:       libavdevice%{?_isa} = %{version}-%{release}
@@ -496,6 +500,9 @@ fi
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Tue Nov 10 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-5
+- Fix the build with openapv 1.1 (from Fedora)
+
 * Mon Nov 09 2026 Martin Rixham <martin.rixham@gmail.com> - 8.1.3-4
 - Fix backward seeking in H.264 decoded with openh264 (from Fedora)
 

@@ -35,7 +35,7 @@
 
 Name:           ffmpeg
 Version:        9.0.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -60,6 +60,10 @@ Patch2:         ffmpeg-vapoursynth-lib-rename.patch
 # https://bugzilla.redhat.com/show_bug.cgi?id=2547586
 # https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/883e8a6336b2651f7be79a6a9aa5f3cc22937948
 Patch3:         ffmpeg-openh264-flush-callback.patch
+# Build with openapv 1.1, whose oapvm_create() takes a descriptor (from
+# Fedora)
+# https://code.ffmpeg.org/FFmpeg/FFmpeg/commit/a7502e5ff39ef53d475b9ee7dd6d4aeb48f047e6
+Patch4:         ffmpeg-openapv1.1.patch
 
 Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
 Requires:       libavdevice%{?_isa} = %{version}-%{release}
@@ -494,6 +498,9 @@ fi
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Tue Nov 10 2026 Martin Rixham <martin.rixham@gmail.com> - 9.0.2-2
+- Fix the build with openapv 1.1 (from Fedora)
+
 * Tue Nov 03 2026 Martin Rixham <martin.rixham@gmail.com> - 9.0.2-1
 - Update to 9.0.2, with new sonames, for Fedora 45, which moved to FFmpeg 9.
   Fedora 44 stays on 8.1, built from ffmpeg8/
