@@ -100,13 +100,6 @@ for dir in "$site"/fedora-*/; do
         rm -rf "$dir"
         unset "todo[$chroot]"
         eol+=("$chroot")
-    else
-        # Also republish chroots that still hold their RPMs on gh-pages, from
-        # before they moved to releases, or have unsigned metadata
-        rpms=("$dir"*.rpm)
-        if [ ${#rpms[@]} -gt 0 ] || [ ! -f "$dir/repodata/repomd.xml.asc" ]; then
-            todo[$chroot]=1
-        fi
     fi
 done
 
@@ -130,15 +123,13 @@ for chroot in "${!todo[@]}"; do
         gh release download "$chroot" --pattern '*.rpm' --dir "$dir"
     fi
 
-    # RPMs left on gh-pages, then the new builds, which replace any of the
-    # same name
+    # The new builds replace any of the same name
     declare -A upload=()
-    for rpm in "$site/$chroot/"*.rpm "$new/$chroot/"!(*.src|*-debuginfo-*|*-debugsource-*).rpm; do
+    for rpm in "$new/$chroot/"!(*.src|*-debuginfo-*|*-debugsource-*).rpm; do
         name=$(asset_name "$(basename "$rpm")")
         cp -p "$rpm" "$dir/$name"
         upload[$name]=1
     done
-    rm -f "$site/$chroot/"*.rpm
 
     # Keep the newest $keep builds of each package so a bad one can be
     # downgraded
