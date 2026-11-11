@@ -133,16 +133,10 @@ jobs:
           echo "builds=$(jq -c 'map(select(.with_repo | not) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
           echo "builds-with-repo=$(jq -c 'map(select(.with_repo) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
 
-          # Builds of packages with a tests/ directory (see
-          # .github/scripts/run-tests.sh), with the release for the container
-          tests=$(
-            for package in $(jq -r '.[].package' <<< "$builds" | sort -u); do
-              if [ -d "$package/tests" ]; then echo "$package"; fi
-            done | jq -Rsc 'split("\n") | map(select(. != ""))'
-          )
-          echo "tests=$(jq -c --argjson tested "$tests" \
-            'map(select(.package as $p | $tested | index($p)) | del(.with_repo) |
-                 .release = (.chroot | split("-")[1]))' <<< "$builds")" >> "$GITHUB_OUTPUT"
+          # Every build is tested (see .github/scripts/run-tests.sh), with
+          # the release for the container
+          echo "tests=$(jq -c 'map(del(.with_repo) | .release = (.chroot | split("-")[1]))' \
+            <<< "$builds")" >> "$GITHUB_OUTPUT"
 
   build:
     needs: plan
@@ -162,7 +156,7 @@ jobs:
       builds: ${{ needs.plan.outputs.builds-with-repo }}
       with-repo: true
 
-  # Runs each built package's tests (<pkg>/tests/, see
+  # Runs each build's tests (tests/ and <pkg>/tests/, see
   # .github/scripts/run-tests.sh) in a container of the chroot's release, on a
   # runner of its architecture, against the RPMs of both build stages. A pass
   # leaves a tested-<pkg>-<chroot> artifact, without which publish leaves out
@@ -202,7 +196,8 @@ jobs:
         env:
           REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
         run: |
-          .github/scripts/run-tests.sh ${{ matrix.package }} ${{ matrix.chroot }} run/${{ matrix.chroot }}
+          .github/scripts/run-tests.sh ${{ matrix.package }} ${{ matrix.chroot }} \
+            run/${{ matrix.chroot }} own/${{ matrix.chroot }}
           mkdir -p tested
           touch tested/${{ matrix.package }}-${{ matrix.chroot }}
 
@@ -256,7 +251,7 @@ jobs:
             name=${dir#built/rpms-}
             chroot=$(grep -oE 'fedora-[0-9]+-[a-z0-9_]+$' <<< "$name")
             package=${name%-"$chroot"}
-            if [ -d "$package/tests" ] && [ ! -e "tested/$package-$chroot" ]; then
+            if [ ! -e "tested/$package-$chroot" ]; then
               echo "::warning::$package for $chroot not published: its tests did not pass"
               continue
             fi

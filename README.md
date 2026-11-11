@@ -217,14 +217,27 @@ through `qemu-user-static`, but slowly.
 
 - Only `main` publishes. Builds of other branches keep their RPMs as
   workflow artifacts.
-- A package with a `tests/` directory is tested after both build stages: each
-  executable file in it runs in a container of the chroot's release, on a
-  runner of its architecture (see `.github/scripts/run-tests.sh`). Tests get
-  the run's RPMs for the chroot as a dnf repository ahead of the published
-  one. A package whose tests do not all pass is not published for that chroot.
-  To run them locally, give the script a directory of RPMs, as root in a
-  Fedora container:
-  `podman run --rm -v $PWD:/r -v ./rpms:/rpms -w /r fedora:44 .github/scripts/run-tests.sh fairydust-kernel fedora-44-aarch64 /rpms`.
+- Every build is tested after both build stages, in a container of the
+  chroot's release, on a runner of its architecture (see
+  `.github/scripts/run-tests.sh`). The tests are the executable files in the
+  top-level `tests/` directory, run for every package, then those in the
+  package's own `tests/` directory. A change to the top-level `tests/` builds
+  nothing; it is first run by the next build of each package. Tests get the run's RPMs for the chroot as a dnf
+  repository ahead of the published one. A package whose tests do not all
+  pass is not published for that chroot. A package leaves out a top-level test
+  by naming it in its own `tests/skip-common`, with a comment saying why.
+  To run them locally, give the script a directory of the run's RPMs and one
+  of the package's own, as root in a Fedora container:
+  `podman run --rm -v $PWD:/r -v ./rpms:/rpms -w /r fedora:44 .github/scripts/run-tests.sh ffmpeg8 fedora-44-aarch64 /rpms/run /rpms/ffmpeg8`.
+  Add `-e REPO_URL=https://martinrixham.github.io/rpmfission` to test the
+  upgrade from the published build.
+  The common tests check that every dependency of the package can be met
+  (`dnf repoclosure`), and that it upgrades from the published build,
+  installs and removes with no scriptlet failing. `ffmpeg` and `ffmpeg8`
+  check that their libraries provide every soname and symbol version of
+  Fedora's `-free` libraries, and that `dnf swap ffmpeg-free ffmpeg
+  --allowerasing` removes nothing else and leaves Fedora's GStreamer libav
+  plugin decoding H.264 and H.265 through them.
   `fairydust-kernel` checks the device trees for DisplayPort over USB-C, the modules and
   the USB-C driver's hotplug patch, that it is at least as new as Asahi's kernel,
   boots it in QEMU with 16K pages, and installs and removes it beside Asahi's

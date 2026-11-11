@@ -1,0 +1,4 @@
+# Installing kernels runs kernel-install, dracut and GRUB's tools, which need
+# the set-up of 50-swap.sh; that test installs, upgrades and removes the
+# kernel instead.
+20-install-upgrade-remove.sh

@@ -1,0 +1,1 @@
+../../ffmpeg/tests/10-sonames.sh
