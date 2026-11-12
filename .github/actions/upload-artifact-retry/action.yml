@@ -1,0 +1,55 @@
+name: Upload artifact with retries
+description: >-
+  actions/upload-artifact, tried up to three times. The upload sometimes fails
+  on a transient network error (such as ECONNRESET while finalizing the
+  artifact), which would otherwise leave a good build unpublished.
+
+inputs:
+  name:
+    description: Artifact name
+    required: true
+  path:
+    description: Files to upload
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: first
+      uses: actions/upload-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: error
+
+    - if: steps.first.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "::warning::Upload of ${{ inputs.name }} failed; retrying in 30 seconds"
+        sleep 30
+
+    # overwrite, in case the failed attempt got as far as creating the artifact
+    - id: second
+      if: steps.first.outcome == 'failure'
+      uses: actions/upload-artifact@v7
+      continue-on-error: true
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: error
+        overwrite: true
+
+    - if: steps.second.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "::warning::Upload of ${{ inputs.name }} failed again; retrying in 90 seconds"
+        sleep 90
+
+    - if: steps.second.outcome == 'failure'
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: error
+        overwrite: true
