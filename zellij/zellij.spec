@@ -1,9 +1,13 @@
 # Rust dependencies are vendored (see sources.sh), so the build runs offline
 # as it would in COPR or mock.
 
+# Full debug info makes the fat LTO link of the zellij binary run out of
+# memory on the 15 GiB aarch64 runners; line tables only is enough.
+%global rustflags_debuginfo 1
+
 Name:           zellij
 Version:        0.46.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -119,6 +123,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %config(noreplace) %{_sysconfdir}/xdg/nvim/init.lua
 
 %changelog
+* Thu Nov 12 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-2
+- Build with reduced debug info, so the LTO link fits in memory on aarch64
+
 * Thu Nov 12 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-1
 - Update to 0.46.0
 
