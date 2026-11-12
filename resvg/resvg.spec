@@ -2,7 +2,7 @@
 # build runs offline as it would in COPR or mock.
 
 Name:           resvg
-Version:        0.49.0
+Version:        0.50.0
 Release:        1%{?dist}
 Summary:        SVG rendering tool
 
@@ -10,7 +10,7 @@ Summary:        SVG rendering tool
 # printed by %%cargo_license_summary in the build log; update it when bumping
 # the version.
 SourceLicense:  Apache-2.0 OR MIT
-License:        MIT AND BSD-2-Clause AND BSD-3-Clause AND ISC AND Zlib AND (Apache-2.0 OR MIT) AND (0BSD OR MIT OR Apache-2.0) AND (MIT OR Zlib OR Apache-2.0) AND (Unlicense OR MIT)
+License:        MIT AND BSD-2-Clause AND BSD-3-Clause AND ISC AND Unicode-3.0 AND Zlib AND (Apache-2.0 OR MIT) AND (0BSD OR MIT OR Apache-2.0) AND (MIT OR Zlib OR Apache-2.0) AND (Unlicense OR MIT)
 URL:            https://github.com/linebender/resvg
 Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.xz
 
@@ -52,5 +52,8 @@ install -Dpm 0755 target/rpm/resvg %{buildroot}%{_bindir}/resvg
 %{_bindir}/resvg
 
 %changelog
+* Thu Nov 12 2026 Martin Rixham <martin.rixham@gmail.com> - 0.50.0-1
+- Update to 0.50.0
+
 * Sat Oct 31 2026 Martin Rixham <martin.rixham@gmail.com> - 0.49.0-1
 - Initial package
