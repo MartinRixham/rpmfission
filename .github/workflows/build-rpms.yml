@@ -34,8 +34,15 @@ jobs:
       - uses: actions/checkout@v7
 
       # git for sources.sh hooks that clone upstream, such as bijiben's
+      # Retried, as Fedora's mirrors sometimes time out
       - name: Install build tools
-        run: dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c git-core
+        run: |
+          for delay in 30 90 0; do
+            dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c git-core && exit 0
+            [ $delay -gt 0 ] || exit 1
+            echo "::warning::dnf install failed; retrying in $delay seconds"
+            sleep $delay
+          done
 
       # Same entry point COPR's make_srpm method uses
       - name: Build SRPM
@@ -66,10 +73,28 @@ jobs:
           fi
           echo "MOCK_REPOS=${repos[*]}" >> "$GITHUB_ENV"
 
+      # Fedora's mirrors sometimes time out while dnf fetches repository
+      # metadata. Mock exits 30 (dnf failed) or 90 (bootstrap chroot setup
+      # failed) for that, so those are retried after a pause; a failed build
+      # (10) or anything else fails at once.
       - name: Build RPMs
         run: |
-          mock -r ${{ matrix.chroot }} --isolation=simple $MOCK_REPOS \
-            --rebuild srpm/*.src.rpm --resultdir results
+          for attempt in 1 2 3; do
+            status=0
+            mock -r ${{ matrix.chroot }} --isolation=simple $MOCK_REPOS \
+              --rebuild srpm/*.src.rpm --resultdir results || status=$?
+            case $status in
+              0) exit 0 ;;
+              30|90) ;;
+              *) exit $status ;;
+            esac
+            if [ $attempt -lt 3 ]; then
+              delay=$((attempt * 60))
+              echo "::warning::mock failed setting up the chroot (exit $status), probably a mirror timeout; retrying in $delay seconds"
+              sleep $delay
+            fi
+          done
+          exit $status
 
       # Staged under <chroot>/ so the publish job knows where each RPM goes
       - name: Stage RPMs
