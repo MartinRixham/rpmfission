@@ -13,7 +13,7 @@
 
 Name:           mozilla-vpn
 Version:        2.40.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Mozilla VPN client
 
 # Mozilla VPN itself is MPL-2.0, its Lottie player MIT, and its Inter and
@@ -81,6 +81,9 @@ Requires:       qt6-qtsvg%{?_isa}
 # The daemon is authorised through polkit, and split tunnelling marks
 # packets with xt_cgroup (see the service's modprobe@xt_cgroup)
 Requires:       polkit
+# Owns %%{_libdir}/mozilla/native-messaging-hosts, the only system directory
+# Fedora's Firefox reads manifests from on 64-bit (not /usr/lib)
+Requires:       mozilla-filesystem
 %{?systemd_requires}
 # Mozilla's own package
 Conflicts:      mozillavpn
@@ -134,8 +137,7 @@ export GOPATH=$PWD/_gopath:%{gopath}
     -DBUILD_TESTING=OFF \
     -DBUILD_CRASHREPORTING=OFF \
     -DBUILD_ID=%{version} \
-    -DCMAKE_INSTALL_SYSCONFDIR=%{_sysconfdir} \
-    -DWEBEXT_INSTALL_LIBDIR=%{_prefix}/lib
+    -DCMAKE_INSTALL_SYSCONFDIR=%{_sysconfdir}
 %cmake_build
 %{cargo_license_summary}
 %{cargo_license} > LICENSE.dependencies
@@ -175,9 +177,7 @@ QT_QPA_PLATFORM=offscreen %{buildroot}%{_bindir}/mozillavpn --version
 %{_datadir}/polkit-1/actions/org.mozilla.vpn.policy
 %{_datadir}/polkit-1/rules.d/org.mozilla.vpn.rules
 # Native messaging manifests for the browser extension
-%dir %{_prefix}/lib/mozilla
-%dir %{_prefix}/lib/mozilla/native-messaging-hosts
-%{_prefix}/lib/mozilla/native-messaging-hosts/mozillavpn.json
+%{_libdir}/mozilla/native-messaging-hosts/mozillavpn.json
 %dir %{_sysconfdir}/chromium
 %dir %{_sysconfdir}/chromium/native-messaging-hosts
 %config(noreplace) %{_sysconfdir}/chromium/native-messaging-hosts/mozillavpn.json
@@ -186,5 +186,9 @@ QT_QPA_PLATFORM=offscreen %{buildroot}%{_bindir}/mozillavpn --version
 %config(noreplace) %{_sysconfdir}/opt/chrome/native-messaging-hosts/mozillavpn.json
 
 %changelog
+* Fri Nov 13 2026 Martin Rixham <martin.rixham@gmail.com> - 2.40.1-2
+- Install the Firefox native messaging manifest in %%{_libdir}, where
+  Fedora's Firefox looks, so Multi-Account Containers finds the VPN
+
 * Thu Nov 12 2026 Martin Rixham <martin.rixham@gmail.com> - 2.40.1-1
 - Initial package
