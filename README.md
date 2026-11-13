@@ -47,6 +47,7 @@ which Fedora builds for x86_64 only.
 | [mesa](mesa/mesa.spec) (Fedora's, with a fix; [mesa-fedora44](mesa-fedora44/mesa-fedora44.spec) for Fedora 44) | https://mesa3d.org/ |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [mozilla-vpn](mozilla-vpn/mozilla-vpn.spec) | https://github.com/mozilla-mobile/mozilla-vpn-client |
+| [mullvad-containers](mullvad-containers/mullvad-containers.spec) (Mullvad servers in Multi-Account Containers; conflicts with `mozilla-vpn`) | (this repository) |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [video-drivers](video-drivers/video-drivers.spec) | (metapackages) |
