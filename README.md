@@ -46,6 +46,7 @@ which Fedora builds for x86_64 only.
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
 | [mesa](mesa/mesa.spec) (Fedora's, with a fix; [mesa-fedora44](mesa-fedora44/mesa-fedora44.spec) for Fedora 44) | https://mesa3d.org/ |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
+| [mozilla-vpn](mozilla-vpn/mozilla-vpn.spec) | https://github.com/mozilla-mobile/mozilla-vpn-client |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [video-drivers](video-drivers/video-drivers.spec) | (metapackages) |
@@ -256,7 +257,12 @@ Packages with no GitHub releases,
 such as tui-torrent, are skipped, as are those hosted elsewhere: bijiben,
 ffmpeg, ffmpeg8, x264 and x265 are updated by hand. bijiben's tarball is made from its
 git tag by `sources.sh`, so a bump changes the `tag` and `commit` at the top of
-its spec rather than `sources`. Keep x264 and x265 at RPM Fusion's sonames
+its spec rather than `sources`. mozilla-vpn also needs three of upstream's git submodules,
+which the tag's tarball leaves out: a bump updates the commits at the top of
+its spec to those the new tag pins (`sources.sh` fails until they match),
+along with their checksums, and its `nftables_version` to that of
+`linux/netfilter/go.mod`: the netfilter library builds against Fedora's Go
+packages, but for nftables, which Fedora does not package. Keep x264 and x265 at RPM Fusion's sonames
 while their packages, which link them, are installed alongside.
 
 A spec that carries Fedora's patches for a package names it on a
