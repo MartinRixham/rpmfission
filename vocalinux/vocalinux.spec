@@ -37,6 +37,10 @@ BuildRequires:  python3-pywhispercpp
 Requires:       gtk3
 Requires:       libayatana-appindicator-gtk3
 Requires:       python3-cairo
+# The "vad" extra: Silero VAD, which finds the pauses dictation is typed at.
+# Without it a loudness threshold stands in, which background noise defeats,
+# so that nothing is typed until dictation is stopped
+Recommends:     python3-onnxruntime
 # Text injection and the tray fall back through these
 Recommends:     gtk-layer-shell
 Recommends:     ibus
@@ -97,6 +101,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/vocalinux.desktop
 %changelog
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 0.18.6-2
 - Show the tray menu in a window where there is no tray host
+- Recommend onnxruntime, for Silero VAD
 
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 0.18.6-1
 - Initial package
