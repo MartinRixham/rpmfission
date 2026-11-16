@@ -188,8 +188,10 @@ sudo usermod -aG input $USER
 ```
 
 Vocalinux downloads its model on first start and is set up from its tray
-icon, or, where there is no tray, as on GNOME without the AppIndicator
-extension, from a window with the same menu. dnf does not replace a package with one from another vendor on
+icon. On GNOME the package pulls in the AppIndicator extension to show that
+icon; enable it with
+`gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com` and log in
+again. dnf does not replace a package with one from another vendor on
 upgrade, so if Fedora's `python3-pywhispercpp` is already installed, as
 `ibus-speech-to-text` installs it, swap it by hand:
 

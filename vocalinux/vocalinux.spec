@@ -8,7 +8,7 @@
 
 Name:           vocalinux
 Version:        0.18.6
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Offline voice dictation for Linux
 
 # vocalinux is AGPL-3.0-only; the Silero VAD model it ships
@@ -21,9 +21,6 @@ Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 # so would take this one for CPU-only: look in the whisper package's
 # directory too
 Patch0:         vocalinux-whisper-vulkan-detect.patch
-# Its controls are in a tray menu alone, which GNOME has no host for without
-# an extension: where there is none, show that menu in a window instead
-Patch1:         vocalinux-window-without-tray.patch
 
 BuildArch:      noarch
 
@@ -37,6 +34,9 @@ BuildRequires:  python3-pywhispercpp
 Requires:       gtk3
 Requires:       libayatana-appindicator-gtk3
 Requires:       python3-cairo
+# Its controls are in a tray menu alone, which GNOME Shell has no host for
+# without this extension
+Requires:       (gnome-shell-extension-appindicator if gnome-shell)
 # The "vad" extra: Silero VAD, which finds the pauses dictation is typed at.
 # Without it a loudness threshold stands in, which background noise defeats,
 # so that nothing is typed until dictation is stopped
@@ -99,6 +99,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/vocalinux.desktop
 %{_datadir}/icons/hicolor/scalable/apps/vocalinux.svg
 
 %changelog
+* Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 0.18.6-3
+- Drop the window without a tray; require the AppIndicator extension on GNOME
+
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 0.18.6-2
 - Show the tray menu in a window where there is no tray host
 - Recommend onnxruntime, for Silero VAD
