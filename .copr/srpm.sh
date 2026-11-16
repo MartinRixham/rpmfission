@@ -8,6 +8,10 @@
 # optional sources.sh hook to generate anything that cannot be downloaded
 # (e.g. vendored dependencies), then runs rpmbuild -bs. Used both by COPR's
 # make_srpm method (via .copr/Makefile) and by the GitHub Actions workflow.
+#
+# If SOURCE_CACHE names a directory, downloaded sources are taken from it
+# when present and saved to it once verified, so that a cached source never
+# depends on the upstream server again. The checksums are checked either way.
 set -euo pipefail
 
 spec=$(realpath "$1")
@@ -31,9 +35,21 @@ for file in $remote_files; do
         { echo "$file has no checksum in $pkgdir/sources" >&2; exit 1; }
 done
 
+# spectool skips files that are already there
+if [ -n "${SOURCE_CACHE:-}" ]; then
+    mkdir -p "$SOURCE_CACHE"
+    for file in $remote_files; do
+        if [ -f "$SOURCE_CACHE/$file" ]; then
+            echo "Using cached $file"
+            cp -p "$SOURCE_CACHE/$file" "$sourcedir"
+        fi
+    done
+fi
+
 # spectool does not fail on download errors, so verify the checksums and
-# retry the whole download a few times to ride out flaky upstream servers
-attempts=3
+# retry the whole download, backing off for a few minutes in all, to ride out
+# flaky upstream servers
+attempts=5
 for attempt in $(seq "$attempts"); do
     spectool --get-files --sourcedir --define "_sourcedir $sourcedir" "$spec"
     if [ ! -f "$pkgdir/sources" ] ||
@@ -47,8 +63,12 @@ for attempt in $(seq "$attempts"); do
     echo "Source verification failed (attempt $attempt/$attempts), retrying" >&2
     # Drop partial or corrupt downloads so spectool fetches them again
     for file in $remote_files; do rm -f "$sourcedir/$file"; done
-    sleep $((attempt * 10))
+    sleep $((15 * 2 ** (attempt - 1)))
 done
+
+if [ -n "${SOURCE_CACHE:-}" ] && [ -f "$pkgdir/sources" ]; then
+    for file in $remote_files; do cp -p "$sourcedir/$file" "$SOURCE_CACHE"; done
+fi
 
 if [ -x "$pkgdir/sources.sh" ]; then
     (cd "$sourcedir" && "$pkgdir/sources.sh")

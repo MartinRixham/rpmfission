@@ -44,8 +44,17 @@ jobs:
             sleep $delay
           done
 
+      # Upstream downloads, kept once verified against the package's sources
+      # file, so that a build does not depend on upstream being up
+      - uses: actions/cache@v6
+        with:
+          path: .source-cache
+          key: sources-${{ matrix.package }}-${{ hashFiles(format('{0}/sources', matrix.package)) }}
+
       # Same entry point COPR's make_srpm method uses
       - name: Build SRPM
+        env:
+          SOURCE_CACHE: ${{ github.workspace }}/.source-cache
         run: make -f .copr/Makefile srpm outdir=srpm spec=${{ matrix.package }}/${{ matrix.package }}.spec
 
       - if: inputs.with-repo
