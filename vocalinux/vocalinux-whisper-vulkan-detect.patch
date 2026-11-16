@@ -1,0 +1,14 @@
+--- vocalinux-0.18.6.orig/src/vocalinux/speech_recognition/recognition_manager.py	2026-11-16 12:25:25.791298081 +0000
++++ vocalinux-0.18.6/src/vocalinux/speech_recognition/recognition_manager.py	2026-11-16 12:25:25.805793553 +0000
+@@ -447,7 +447,10 @@
+ def detect_pywhispercpp_gpu_backend() -> str:
+     """Detect whether pywhispercpp's native library actually has GPU support."""
+     _preload_pywhispercpp_shared_libraries()
+-    for library_dir in _find_pywhispercpp_shared_library_dirs():
++    # The whisper package keeps its ggml backends in a private directory, which
++    # is not searched for libraries to preload (it holds a CPU backend for each
++    # instruction set, loaded by ggml only when the CPU supports it)
++    for library_dir in [*_find_pywhispercpp_shared_library_dirs(), "/usr/lib64/whisper"]:
+         root = Path(library_dir)
+         for pattern in ("libggml-vulkan*.so*", "libggml-cuda*.so*"):
+             matches = list(root.glob(pattern))

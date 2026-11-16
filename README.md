@@ -48,9 +48,11 @@ which Fedora builds for x86_64 only.
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [mozilla-vpn](mozilla-vpn/mozilla-vpn.spec) | https://github.com/mozilla-mobile/mozilla-vpn-client |
 | [mullvad-containers](mullvad-containers/mullvad-containers.spec) (Mullvad servers in Multi-Account Containers; conflicts with `mozilla-vpn`) | (this repository) |
+| [pywhispercpp](pywhispercpp/pywhispercpp.spec) (Fedora's, built against `whisper`) | https://github.com/absadiki/pywhispercpp |
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [video-drivers](video-drivers/video-drivers.spec) | (metapackages) |
+| [vocalinux](vocalinux/vocalinux.spec) | https://github.com/VocaHQ/vocalinux |
 | [whisper](whisper/whisper.spec) (whisper.cpp, accelerated with Vulkan) | https://github.com/ggml-org/whisper.cpp |
 | [x264](x264/x264.spec) | https://code.videolan.org/videolan/x264 |
 | [x265](x265/x265.spec) | https://bitbucket.org/multicoreware/x265_git |
@@ -170,7 +172,30 @@ whisper-cli -m ggml-medium.en-q5_0.bin -f talk.mp3
 On an M2 MacBook Air, the GPU transcribes with `medium.en-q5_0` about 3.6
 times as fast as the CPU; with `base.en` and `small.en`, whose time goes
 mostly into decoding, it gains little. Its libraries are private, in
-`/usr/lib64/whisper`, so it installs alongside Fedora's `whisper-cpp`.
+`/usr/lib64/whisper`, so it installs alongside Fedora's `whisper-cpp`;
+`whisper-devel` builds against them (see the top of its spec).
+
+`vocalinux` is a dictation app: hold Right Alt, speak, and the text is typed
+into the focused window. Its whisper.cpp engine is `python3-pywhispercpp`,
+which here replaces Fedora's, a CPU-only build with its own copy of
+whisper.cpp, with one built against `whisper`, so dictation runs on the GPU
+too. Its hotkey reads the keyboard from `/dev/input`, which needs membership
+of the `input` group (log in again after adding it):
+
+```sh
+sudo dnf install vocalinux
+sudo usermod -aG input $USER
+```
+
+Vocalinux downloads its model on first start and is set up from its tray
+icon. dnf does not replace a package with one from another vendor on
+upgrade, so if Fedora's `python3-pywhispercpp` is already installed, as
+`ibus-speech-to-text` installs it, swap it by hand:
+
+```sh
+sudo rpm -e --nodeps python3-pywhispercpp
+sudo dnf install python3-pywhispercpp
+```
 
 ## Layout
 

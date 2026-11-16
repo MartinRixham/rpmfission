@@ -1,0 +1,21 @@
+--- pywhispercpp-1.5.1.orig/src/main.cpp	2026-11-16 12:11:59.850276461 +0000
++++ pywhispercpp-1.5.1/src/main.cpp	2026-11-16 12:11:59.859152821 +0000
+@@ -16,6 +16,7 @@
+ #include <pybind11/numpy.h>
+ 
+ #include "whisper.h"
++#include "ggml-backend.h"
+ 
+ 
+ #define STRINGIFY(x) #x
+@@ -851,6 +852,10 @@
+ ////////////
+ 
+ PYBIND11_MODULE(_pywhispercpp, m) {
++    // whisper.cpp built with GGML_BACKEND_DL loads its CPU and GPU backends
++    // only when the program asks; without them it has no device to run on
++    ggml_backend_load_all();
++
+     m.doc() = R"pbdoc(
+         Pywhispercpp: Python binding to whisper.cpp
+         -----------------------

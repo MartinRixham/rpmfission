@@ -4,7 +4,10 @@
 # The libraries (libwhisper and ggml) are private, in %%{_libdir}/whisper,
 # because Fedora's whisper-cpp and llama-cpp packages ship their own builds
 # of them under the same sonames. The commands find them through their
-# RPATH. No development files are shipped.
+# RPATH. whisper-devel keeps to the same directory, and its headers to
+# %%{_includedir}/whisper, so that it installs alongside whisper-cpp-devel:
+# programs that build against it find it through its CMake package
+# (-Dwhisper_DIR=%%{_libdir}/whisper/cmake/whisper) and need the same RPATH.
 #
 # The ggml backends are loaded at runtime from the same directory: one CPU
 # backend for each level of x86_64 or aarch64 features, from which ggml picks
@@ -12,6 +15,12 @@
 # and skips otherwise.
 
 %global libdir_private %{_libdir}/whisper
+
+# The private libraries must not provide their sonames, which would satisfy
+# other packages' dependencies on Fedora's builds of them; so the commands,
+# in the same package, do not require them either
+%global __provides_exclude_from ^%{libdir_private}/.*$
+%global __requires_exclude ^lib(whisper|parakeet|ggml|ggml-base)\\.so.*$
 
 Name:           whisper
 Version:        1.9.5
@@ -55,6 +64,17 @@ whisper-quantize, and parakeet-cli and parakeet-quantize, for NVIDIA's
 Parakeet models. Models are not included: whisper-download-ggml-model
 downloads Whisper models into the current directory.
 
+%package        devel
+Summary:        Development files for the whisper package's whisper.cpp
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description    devel
+Headers, CMake packages and pkg-config files for building against this
+package's libwhisper and ggml, which are installed in %{libdir_private}
+rather than on the linker's search path. The ggml backends are loaded at
+runtime, so a program must call ggml_backend_load_all() before it creates a
+whisper context.
+
 %prep
 %autosetup -n whisper.cpp-%{version}
 # The talk-llama example downloads llama.cpp while configuring, and needs a
@@ -68,6 +88,7 @@ if grep -q talk-llama examples/CMakeLists.txt; then exit 1; fi
 %cmake \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_LIBDIR=%{_lib}/whisper \
+    -DCMAKE_INSTALL_INCLUDEDIR=include/whisper \
     -DCMAKE_INSTALL_RPATH=%{libdir_private} \
     -DCMAKE_SKIP_INSTALL_RPATH=OFF \
     -DWHISPER_BUILD_TESTS=OFF \
@@ -86,11 +107,6 @@ if grep -q talk-llama examples/CMakeLists.txt; then exit 1; fi
 install -Dpm 0755 models/download-ggml-model.sh \
     %{buildroot}%{_bindir}/whisper-download-ggml-model
 
-# Development files, which would clash with whisper-cpp-devel's
-rm -rf %{buildroot}%{_includedir} \
-    %{buildroot}%{libdir_private}/cmake \
-    %{buildroot}%{libdir_private}/pkgconfig
-rm %{buildroot}%{libdir_private}/lib{whisper,parakeet,ggml,ggml-base}.so
 # The deprecated names of the commands, which only print a warning
 for f in %{buildroot}%{_bindir}/*; do
     case "${f##*/}" in
@@ -120,6 +136,15 @@ ls %{buildroot}%{libdir_private}/libggml-vulkan.so
 # The backends are loaded with dlopen and so have no soname
 %{libdir_private}/libggml-cpu-*.so
 %{libdir_private}/libggml-vulkan.so
+
+%files devel
+%{_includedir}/whisper/
+%{libdir_private}/libwhisper.so
+%{libdir_private}/libparakeet.so
+%{libdir_private}/libggml.so
+%{libdir_private}/libggml-base.so
+%{libdir_private}/cmake/
+%{libdir_private}/pkgconfig/
 
 %changelog
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 1.9.5-1

@@ -1,0 +1,22 @@
+--- pywhispercpp-1.5.1.orig/CMakeLists.txt	2026-11-16 12:11:59.845828739 +0000
++++ pywhispercpp-1.5.1/CMakeLists.txt	2026-11-16 12:11:59.846922659 +0000
+@@ -1,8 +1,10 @@
+-cmake_minimum_required(VERSION 3.4...3.18)
++cmake_minimum_required(VERSION 3.18)
+ project(pywhispercpp)
+ 
+-add_subdirectory(pybind11)
+-add_subdirectory(whisper.cpp)
++# Build against an installed whisper.cpp, found through its CMake package
++# (whisper_DIR), and the system pybind11, instead of the git submodules
++find_package(pybind11 CONFIG REQUIRED)
++find_package(whisper CONFIG REQUIRED)
+ 
+ pybind11_add_module(_pywhispercpp
+ 	src/main.cpp
+@@ -10,3 +12,5 @@
+ 
+ target_link_libraries (_pywhispercpp PRIVATE whisper)
+ 
++# libwhisper may be outside the linker's search path
++set_target_properties(_pywhispercpp PROPERTIES INSTALL_RPATH "${WHISPER_LIB_DIR}")
