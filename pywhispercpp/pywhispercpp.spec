@@ -47,7 +47,9 @@ runs on the GPU through Vulkan where there is a Vulkan driver.
 %package -n     python3-%{pypi_name}
 Summary:        %{summary}
 # The binding is built against whisper.cpp's headers, whose API only grows
-Requires:       whisper%{?_isa} >= %(rpm -q --qf '%%{version}' whisper-devel 2>/dev/null || echo 0)
+# (rpm -q prints "not installed" on stdout, so its output is kept only when
+# it succeeds; whisper-devel is absent when the SRPM is built)
+Requires:       whisper%{?_isa} >= %(rpm -q --qf '%%{version}' whisper-devel 2>/dev/null > /dev/null && rpm -q --qf '%%{version}' whisper-devel || echo 0)
 
 %description -n python3-%{pypi_name}
 pywhispercpp provides Python bindings for whisper.cpp with a simple Pythonic

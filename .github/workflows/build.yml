@@ -87,9 +87,11 @@ jobs:
               sed -E 's/-(devel|libs|static)$//' | sort -u | comm -12 - <(echo "$all")
           }
 
-          # A malformed rpmfission-fedora line fails here, not silently in
-          # the command substitutions below
+          # A spec rpmspec cannot parse, or a malformed rpmfission-fedora
+          # line, fails here, not silently in the command substitutions
+          # below
           for spec in */*.spec; do
+            rpmspec -q --srpm "$spec" > /dev/null || exit 1
             rc=0
             .github/scripts/release-ok.sh 0 "$spec" || rc=$?
             [ "$rc" -ne 2 ] || exit 1
