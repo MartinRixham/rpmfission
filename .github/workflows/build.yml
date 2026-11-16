@@ -33,7 +33,8 @@ jobs:
       image: registry.fedoraproject.org/fedora:latest
     outputs:
       builds: ${{ steps.builds.outputs.builds }}
-      builds-with-repo: ${{ steps.builds.outputs.builds-with-repo }}
+      builds-stage2: ${{ steps.builds.outputs.builds-stage2 }}
+      builds-stage3: ${{ steps.builds.outputs.builds-stage3 }}
       tests: ${{ steps.builds.outputs.tests }}
     steps:
       # git before checkout, or it downloads the tree without history
@@ -54,10 +55,14 @@ jobs:
       # so that a package can have a spec per range of releases, such as
       # ffmpeg and ffmpeg8.
       #
-      # Packages with a BuildRequires on another package of this repository
-      # (<pkg>, <pkg>-devel, <pkg>-libs or <pkg>-static) build in a second
-      # stage, against the RPMs of the first and the published repository.
-      # Their own build dependencies must be in the first stage.
+      # A package with a BuildRequires on another package of this repository
+      # (<pkg>, <pkg>-devel, <pkg>-libs, <pkg>-static or python3-<pkg>)
+      # builds in a later stage than the packages it needs: a package needing
+      # none is in stage 1, and any other one stage after the latest of
+      # those it needs (whisper 1, pywhispercpp 2, vocalinux 3). A stage
+      # builds against the RPMs of the earlier stages of the run and the
+      # published repository. There are three stages, as jobs cannot be
+      # made at run time; a dependency cycle or a fourth stage fails here.
       - id: builds
         env:
           REQUESTED: ${{ inputs.packages }}
@@ -84,7 +89,29 @@ jobs:
 
           repo_deps() {
             sed -nE 's/^BuildRequires:[[:space:]]*([^[:space:]]+).*/\1/p' "$1/$1.spec" |
-              sed -E 's/-(devel|libs|static)$//' | sort -u | comm -12 - <(echo "$all")
+              sed -E 's/^python3-//; s/-(devel|libs|static)$//' | sort -u |
+              comm -12 - <(grep -vxF -- "$1" <<< "$all")
+          }
+
+          # Not called in a command substitution, so that exit fails the step
+          declare -A stage=() visiting=()
+          set_stage() {
+            local package=$1 dep max=0
+            [ -z "${stage[$package]:-}" ] || return 0
+            if [ -n "${visiting[$package]:-}" ]; then
+              echo "::error::Build dependency cycle through $package"
+              exit 1
+            fi
+            visiting[$package]=1
+            for dep in $(repo_deps "$package"); do
+              set_stage "$dep"
+              [ "${stage[$dep]}" -le "$max" ] || max=${stage[$dep]}
+            done
+            stage[$package]=$((max + 1))
+            if [ "${stage[$package]}" -gt 3 ]; then
+              echo "::error::$package would build in stage ${stage[$package]}; build.yml has 3"
+              exit 1
+            fi
           }
 
           # A spec rpmspec cannot parse, or a malformed rpmfission-fedora
@@ -95,6 +122,9 @@ jobs:
             rc=0
             .github/scripts/release-ok.sh 0 "$spec" || rc=$?
             [ "$rc" -ne 2 ] || exit 1
+          done
+          for package in $all; do
+            set_stage "$package"
           done
 
           builds_for() {
@@ -123,21 +153,21 @@ jobs:
                 packages=$all
               fi
               for package in $(builds_for "$release" "$arch" $packages); do
-                with_repo=false
-                [ -n "$(repo_deps "$package")" ] && with_repo=true
                 jq -nc --arg package "$package" --arg chroot "$chroot" \
-                  --argjson with_repo "$with_repo" \
-                  '{package: $package, chroot: $chroot, with_repo: $with_repo}'
+                  --argjson stage "${stage[$package]}" \
+                  '{package: $package, chroot: $chroot, stage: $stage}'
               done
             done
             done | jq -sc .
           )
-          echo "builds=$(jq -c 'map(select(.with_repo | not) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
-          echo "builds-with-repo=$(jq -c 'map(select(.with_repo) | del(.with_repo))' <<< "$builds")" >> "$GITHUB_OUTPUT"
+          for n in 1 2 3; do
+            echo "builds$([ $n -eq 1 ] || echo -stage$n)=$(jq -c --argjson n $n \
+              'map(select(.stage == $n) | del(.stage))' <<< "$builds")" >> "$GITHUB_OUTPUT"
+          done
 
           # Every build is tested (see .github/scripts/run-tests.sh), with
           # the release for the container
-          echo "tests=$(jq -c 'map(del(.with_repo) | .release = (.chroot | split("-")[1]))' \
+          echo "tests=$(jq -c 'map(del(.stage) | .release = (.chroot | split("-")[1]))' \
             <<< "$builds")" >> "$GITHUB_OUTPUT"
 
   build:
@@ -147,24 +177,36 @@ jobs:
     with:
       builds: ${{ needs.plan.outputs.builds }}
 
-  build-with-repo:
+  build-stage2:
     needs: [plan, build]
     # After the first stage, whether it built, failed or had nothing to build
     if: >-
       !cancelled() && needs.plan.result == 'success' &&
-      needs.plan.outputs.builds-with-repo != '[]'
+      needs.plan.outputs.builds-stage2 != '[]'
     uses: ./.github/workflows/build-rpms.yml
     with:
-      builds: ${{ needs.plan.outputs.builds-with-repo }}
+      builds: ${{ needs.plan.outputs.builds-stage2 }}
+      with-repo: true
+
+  build-stage3:
+    needs: [plan, build, build-stage2]
+    # After the earlier stages, whether they built, failed or had nothing to
+    # build
+    if: >-
+      !cancelled() && needs.plan.result == 'success' &&
+      needs.plan.outputs.builds-stage3 != '[]'
+    uses: ./.github/workflows/build-rpms.yml
+    with:
+      builds: ${{ needs.plan.outputs.builds-stage3 }}
       with-repo: true
 
   # Runs each build's tests (tests/ and <pkg>/tests/, see
   # .github/scripts/run-tests.sh) in a container of the chroot's release, on a
-  # runner of its architecture, against the RPMs of both build stages. A pass
+  # runner of its architecture, against the RPMs of all the build stages. A pass
   # leaves a tested-<pkg>-<chroot> artifact, without which publish leaves out
   # that package's RPMs for the chroot.
   test:
-    needs: [plan, build, build-with-repo]
+    needs: [plan, build, build-stage2, build-stage3]
     if: >-
       !cancelled() && needs.plan.result == 'success' &&
       needs.plan.outputs.tests != '[]'
@@ -210,14 +252,15 @@ jobs:
           path: tested/
 
   publish:
-    needs: [plan, build, build-with-repo, test]
+    needs: [plan, build, build-stage2, build-stage3, test]
     # Publish whatever built, even if some packages in the matrix failed, but
     # not the RPMs of a package whose tests did not pass.
     # Only main publishes; other branches, such as update PRs, only build.
     if: >-
       !cancelled() && github.ref == 'refs/heads/main' &&
       (contains(fromJSON('["success", "failure"]'), needs.build.result) ||
-       contains(fromJSON('["success", "failure"]'), needs.build-with-repo.result))
+       contains(fromJSON('["success", "failure"]'), needs.build-stage2.result) ||
+       contains(fromJSON('["success", "failure"]'), needs.build-stage3.result))
     runs-on: ubuntu-latest
     container:
       image: registry.fedoraproject.org/fedora:latest

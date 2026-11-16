@@ -28,10 +28,12 @@
 #
 # On an update, set ASAHI_SRPM and its checksum in sources.sh, take the new
 # kernel.spec from that source RPM and redo the changes marked "rpmfission",
-# and refresh the patches from the fairydust branch.
+# and refresh the patches from the fairydust branch. Take the signed source
+# RPM from the COPR's fedora-44-aarch64/Packages/k/, not srpm-builds/, which
+# COPR deletes once the build is done.
 # tests/30-newer-than-asahi.sh fails when Asahi has a newer kernel.
 #
-# Source: https://download.copr.fedorainfracloud.org/results/@asahi/kernel/srpm-builds/11219225/kernel-7.2.12-402.asahi.fc44.src.rpm
+# Source: https://download.copr.fedorainfracloud.org/results/@asahi/kernel/fedora-44-aarch64/Packages/k/kernel-7.2.12-402.asahi.fc44.src.rpm
 # (all of Asahi's sources come from it; see sources.sh)
 
 # All Global changes to build and install go here.

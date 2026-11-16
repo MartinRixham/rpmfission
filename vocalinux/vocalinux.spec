@@ -26,6 +26,9 @@ BuildArch:      noarch
 
 BuildRequires:  desktop-file-utils
 BuildRequires:  python3-devel
+# Also generated from the Python metadata, but stated here so that the build
+# runs against this repository's pywhispercpp: Fedora 44 has none
+BuildRequires:  python3-pywhispercpp
 
 # Typelibs PyGObject loads, which the Python metadata cannot express
 Requires:       gtk3

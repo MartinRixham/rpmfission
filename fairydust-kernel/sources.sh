@@ -8,8 +8,8 @@
 # in the spec's source directory.
 set -euo pipefail
 
-ASAHI_SRPM=https://download.copr.fedorainfracloud.org/results/@asahi/kernel/srpm-builds/11219225/kernel-7.2.12-402.asahi.fc44.src.rpm
-ASAHI_SRPM_SHA512=40aabee7619be73db366106fcc4f2b4e93e187c070a16eed0c777974cd9a3deed9c62918e5cf3bf508048a528980e88ca097cc94c78ad75de0eea3316d106957
+ASAHI_SRPM=https://download.copr.fedorainfracloud.org/results/@asahi/kernel/fedora-44-aarch64/Packages/k/kernel-7.2.12-402.asahi.fc44.src.rpm
+ASAHI_SRPM_SHA512=a180f7c95be36d44f55cbb4c454bb4c1052000137faba54823ba1623b99266d65c4497916ec34a8c93f062531e81ae70911398d59158e89b45a61795b3697b92
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
