@@ -51,6 +51,7 @@ which Fedora builds for x86_64 only.
 | [resvg](resvg/resvg.spec) | https://github.com/linebender/resvg |
 | [tui-torrent](tui-torrent/tui-torrent.spec) | https://github.com/QuintenWiggill/tui-torrent |
 | [video-drivers](video-drivers/video-drivers.spec) | (metapackages) |
+| [whisper](whisper/whisper.spec) (whisper.cpp, accelerated with Vulkan) | https://github.com/ggml-org/whisper.cpp |
 | [x264](x264/x264.spec) | https://code.videolan.org/videolan/x264 |
 | [x265](x265/x265.spec) | https://bitbucket.org/multicoreware/x265_git |
 | [yazi](yazi/yazi.spec) | https://github.com/sxyazi/yazi |
@@ -151,6 +152,25 @@ use.
 `mesa-va-drivers-freeworld` replaces the shared `libgallium` of Fedora's Mesa,
 so it must be exactly the version of Fedora's `mesa-dri-drivers`. Until it is
 rebuilt for a Fedora Mesa update, dnf holds that update back.
+
+### Speech recognition
+
+`whisper` is whisper.cpp built with its Vulkan backend, so it runs Whisper
+models on the GPU wherever there is a Vulkan driver, including on Apple
+Silicon under Fedora Asahi Remix, and on the CPU otherwise. Models are not
+packaged; download one into the current directory and transcribe a WAV,
+MP3, FLAC or Ogg Vorbis file:
+
+```sh
+sudo dnf install whisper
+whisper-download-ggml-model medium.en-q5_0
+whisper-cli -m ggml-medium.en-q5_0.bin -f talk.mp3
+```
+
+On an M2 MacBook Air, the GPU transcribes with `medium.en-q5_0` about 3.6
+times as fast as the CPU; with `base.en` and `small.en`, whose time goes
+mostly into decoding, it gains little. Its libraries are private, in
+`/usr/lib64/whisper`, so it installs alongside Fedora's `whisper-cpp`.
 
 ## Layout
 
