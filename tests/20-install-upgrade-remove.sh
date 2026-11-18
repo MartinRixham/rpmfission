@@ -5,7 +5,8 @@
 #   1. The published build of each of its subpackages, where there is one,
 #      is installed, and upgraded with "dnf upgrade" to this run's, as users
 #      get it. This exercises Obsoletes, Conflicts and the old build's
-#      %preun and %postun.
+#      %preun and %postun. If the published build's dependencies can no
+#      longer be met from Fedora, this is skipped with a warning.
 #   2. This run's RPMs are installed, for the subpackages not published yet.
 #   3. They are all removed.
 #
@@ -37,8 +38,22 @@ fi
 
 if [ ${#published[@]} -gt 0 ]; then
     echo "== Installing the published build: ${published[*]}"
-    dnf_checked install --disable-repo=rpmfission-run "${published[@]}" ||
+    rc=0
+    out=$(dnf_checked install --disable-repo=rpmfission-run "${published[@]}" 2>&1) || rc=$?
+    echo "$out"
+    if [ "$rc" -ne 0 ] && grep -q 'Failed to resolve the transaction' <<< "$out"; then
+        # Its dependencies are gone from Fedora, as for a package that
+        # requires an exact Fedora version (mesa-freeworld) once Fedora has
+        # moved on: this run's build is what fixes that, so there is nothing
+        # to upgrade from.
+        echo "::warning::the published build of ${published[*]} no longer installs on Fedora; skipping the upgrade from it"
+        published=()
+    elif [ "$rc" -ne 0 ]; then
         fail "the published build does not install"
+    fi
+fi
+
+if [ ${#published[@]} -gt 0 ]; then
     echo "== Upgrading to this run's build"
     dnf_checked upgrade "${published[@]}" || fail "dnf upgrade failed"
     for name in "${published[@]}"; do
