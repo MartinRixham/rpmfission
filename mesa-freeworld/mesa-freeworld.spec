@@ -24,7 +24,7 @@
 %global _lto_cflags %{nil}
 
 Name:           mesa-freeworld
-Version:        26.2.6
+Version:        26.2.7
 Release:        1%{?dist}
 Summary:        Mesa VA-API drivers with all video codecs
 
@@ -214,6 +214,9 @@ fi
 %{_libdir}/dri-freeworld/virtio_gpu_drv_video.so
 
 %changelog
+* Wed Nov 18 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.7-1
+- Update to 26.2.7 upstream release
+
 * Mon Nov 09 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.6-1
 - Update to 26.2.6 upstream release
 

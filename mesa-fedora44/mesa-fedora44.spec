@@ -102,7 +102,7 @@
 
 Name:           mesa
 Summary:        Mesa graphics libraries
-Version:        26.2.6
+Version:        26.2.7
 # rpmfission: suffix, newer than Fedora's build of the same Release
 Release:        1%{?dist}.1
 License:        MIT AND BSD-3-Clause AND SGI-B-2.0
@@ -775,6 +775,12 @@ ln -s libGLX_mesa.so.0 %{buildroot}%{_libdir}/libGLX_system.so.0
 
 %changelog
 # rpmfission: Fedora's changelog is made from its dist-git history
+* Wed Nov 18 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.7-1.1
+- Honeykrisp: honour the plane offsets of imported dmabufs, which fixes video
+  from the Apple video decoder in GTK's Vulkan renderer
+- Build for aarch64 only
+- Fedora's 26.2.7-1 otherwise
+
 * Fri Nov 06 2026 Martin Rixham <martin.rixham@gmail.com> - 26.2.6-1.1
 - Honeykrisp: honour the plane offsets of imported dmabufs, which fixes video
   from the Apple video decoder in GTK's Vulkan renderer
