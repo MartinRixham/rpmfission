@@ -329,6 +329,17 @@ way, and `gstreamer1-plugins-bad-free` and `mesa` follow Fedora's own
 packages. To update one, take Fedora's new spec and redo the changes the spec
 marks.
 
+The same workflow also runs `dnf repoclosure` on the newest published build of
+each package, for every chroot, against Fedora's `fedora`, `updates` and
+`fedora-cisco-openh264` repositories. A dependency can break with no change
+here: Fedora updates a library to a new soname (openapv 1.1 for ffmpeg), or
+updates a package that one of ours requires at an exact version (mesa for
+mesa-freeworld). It keeps an issue titled
+`<package>: published RPMs have unmet dependencies` open for each source
+package affected, listing what is missing per chroot, and fails the run
+meanwhile. Usually a rebuild (bump `Release`) or an update to Fedora's new
+version fixes it.
+
 ## Repository settings
 
 - GitHub Pages must deploy from the `gh-pages` branch.
