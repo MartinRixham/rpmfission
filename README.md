@@ -37,7 +37,7 @@ which Fedora builds for x86_64 only.
 | Package | Upstream |
 | ------- | -------- |
 | [avd-fw-freeworld](avd-fw-freeworld/avd-fw-freeworld.spec) | https://github.com/AsahiLinux/avd-fw |
-| [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/gnome-notes |
+| [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/bijiben |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
 | [fairydust-kernel](fairydust-kernel/fairydust-kernel.spec) (Asahi's `kernel-16k`, with DisplayPort over USB-C) | https://github.com/AsahiLinux/linux |
 | [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
