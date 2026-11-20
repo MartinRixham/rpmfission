@@ -35,7 +35,7 @@
 
 Name:           ffmpeg
 Version:        9.0.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Record, convert and stream audio and video
 
 # --enable-gpl and --enable-version3 (for the Apache-2.0 and LGPL-3.0
@@ -498,6 +498,9 @@ fi
 %{_mandir}/man3/lib*.3*
 
 %changelog
+* Fri Nov 20 2026 Martin Rixham <martin.rixham@gmail.com> - 9.0.2-3
+- Rebuild against openapv 1.1 (liboapv.so.11), now in Fedora 45 updates
+
 * Tue Nov 10 2026 Martin Rixham <martin.rixham@gmail.com> - 9.0.2-2
 - Fix the build with openapv 1.1 (from Fedora)
 
