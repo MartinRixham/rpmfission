@@ -1,4 +1,4 @@
-From 8c0bc1950c93a9278e7689a8d13e101d391f36e9 Mon Sep 17 00:00:00 2001
+From b584b834fa3924405b9c49f4f610cef679bbaf37 Mon Sep 17 00:00:00 2001
 From: Janne Grunau <j@jannau.net>
 Date: Mon, 22 Dec 2025 22:08:35 +0100
 Subject: [PATCH 02/11] usb: typec: tipd: HACK: Use drm oob hotplug event
@@ -14,7 +14,7 @@ Signed-off-by: Janne Grunau <j@jannau.net>
  2 files changed, 20 insertions(+)
 
 diff --git a/drivers/usb/typec/tipd/core.c b/drivers/usb/typec/tipd/core.c
-index d858c454fe10..c045f61093f1 100644
+index 49b42ac..a013a35 100644
 --- a/drivers/usb/typec/tipd/core.c
 +++ b/drivers/usb/typec/tipd/core.c
 @@ -6,6 +6,8 @@
@@ -26,7 +26,7 @@ index d858c454fe10..c045f61093f1 100644
  #include <linux/i2c.h>
  #include <linux/acpi.h>
  #include <linux/gpio/consumer.h>
-@@ -684,6 +686,9 @@ static void cd321x_update_work(struct work_struct *work)
+@@ -714,6 +716,9 @@ static void cd321x_update_work(struct work_struct *work)
  	bool usb_connection = st.data_status &
  			      (TPS_DATA_STATUS_USB2_CONNECTION | TPS_DATA_STATUS_USB3_CONNECTION);
  
@@ -36,7 +36,7 @@ index d858c454fe10..c045f61093f1 100644
  	enum usb_role old_role = usb_role_switch_get_role(tps->role_sw);
  	enum usb_role new_role = USB_ROLE_NONE;
  	enum typec_pwr_opmode pwr_opmode = TYPEC_PWR_MODE_USB;
-@@ -712,6 +717,10 @@ static void cd321x_update_work(struct work_struct *work)
+@@ -742,6 +747,10 @@ static void cd321x_update_work(struct work_struct *work)
  	if (old_role != USB_ROLE_NONE && (new_role != old_role || was_disconnected))
  		usb_role_switch_set_role(tps->role_sw, USB_ROLE_NONE);
  
@@ -47,7 +47,7 @@ index d858c454fe10..c045f61093f1 100644
  	/* Process partner disconnection or change */
  	if (!new_connected || partner_changed) {
  		if (!IS_ERR(tps->partner))
-@@ -768,6 +777,9 @@ static void cd321x_update_work(struct work_struct *work)
+@@ -798,6 +807,9 @@ static void cd321x_update_work(struct work_struct *work)
  	/* Launch the USB role switch */
  	usb_role_switch_set_role(tps->role_sw, new_role);
  
@@ -57,7 +57,7 @@ index d858c454fe10..c045f61093f1 100644
  	power_supply_changed(tps->psy);
  }
  
-@@ -1203,6 +1215,7 @@ static int
+@@ -1242,6 +1254,7 @@ static int
  cd321x_register_port(struct tps6598x *tps, struct fwnode_handle *fwnode)
  {
  	struct cd321x *cd321x = container_of(tps, struct cd321x, tps);
@@ -65,7 +65,7 @@ index d858c454fe10..c045f61093f1 100644
  	int ret;
  
  	INIT_DELAYED_WORK(&cd321x->update_work, cd321x_update_work);
-@@ -1227,6 +1240,11 @@ cd321x_register_port(struct tps6598x *tps, struct fwnode_handle *fwnode)
+@@ -1266,6 +1279,11 @@ cd321x_register_port(struct tps6598x *tps, struct fwnode_handle *fwnode)
  		goto err_unregister_mux;
  	}
  
@@ -78,10 +78,10 @@ index d858c454fe10..c045f61093f1 100644
  	cd321x->state.mode = TYPEC_STATE_SAFE;
  	cd321x->state.data = NULL;
 diff --git a/drivers/usb/typec/tipd/tps6598x.h b/drivers/usb/typec/tipd/tps6598x.h
-index 4dfca6aefd0b..17b01d2c55c9 100644
+index 6d1b719..12a3795 100644
 --- a/drivers/usb/typec/tipd/tps6598x.h
 +++ b/drivers/usb/typec/tipd/tps6598x.h
-@@ -383,6 +383,8 @@ struct cd321x {
+@@ -389,6 +389,8 @@ struct cd321x {
  	struct cd321x_status update_status;
  	struct delayed_work update_work;
  	struct usb_pd_identity cur_partner_identity;
@@ -91,5 +91,5 @@ index 4dfca6aefd0b..17b01d2c55c9 100644
  
  struct sn201202x {
 -- 
-2.56.0
+2.56.1
 

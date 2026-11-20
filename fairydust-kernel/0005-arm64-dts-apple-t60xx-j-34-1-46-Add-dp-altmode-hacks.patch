@@ -1,4 +1,4 @@
-From 1aba74bdd8b2ac5f47274d1d2b5bdebecbd15bc8 Mon Sep 17 00:00:00 2001
+From 62ff87c5b5c8117fbb2659ff3289281296650adc Mon Sep 17 00:00:00 2001
 From: Janne Grunau <j@jannau.net>
 Date: Sat, 5 Nov 2022 21:22:50 +0100
 Subject: [PATCH 05/11] arm64: dts: apple: t60xx: j[34]1[46]: Add dp-altmode
@@ -13,7 +13,7 @@ Signed-off-by: Janne Grunau <j@jannau.net>
  2 files changed, 54 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi b/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
-index 028f44690097..cb91fdf616d3 100644
+index 028f446..cb91fdf 100644
 --- a/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
 +++ b/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
 @@ -9,6 +9,8 @@
@@ -103,7 +103,7 @@ index 028f44690097..cb91fdf616d3 100644
  	status = "okay";
  
 diff --git a/arch/arm64/boot/dts/apple/t602x-j414-j416.dtsi b/arch/arm64/boot/dts/apple/t602x-j414-j416.dtsi
-index 428e8d009bac..946f27c9979b 100644
+index 428e8d0..946f27c 100644
 --- a/arch/arm64/boot/dts/apple/t602x-j414-j416.dtsi
 +++ b/arch/arm64/boot/dts/apple/t602x-j414-j416.dtsi
 @@ -29,7 +29,10 @@
@@ -119,5 +119,5 @@ index 428e8d009bac..946f27c9979b 100644
  
  /* HACK: keep dptx_phy_ps power-domain always-on
 -- 
-2.56.0
+2.56.1
 

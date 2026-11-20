@@ -1,4 +1,4 @@
-From 92d182097086eb1391fdb5d857d0a5ef2512970c Mon Sep 17 00:00:00 2001
+From 4577cd86dd4282192fb3f275a770ec114a23a9d2 Mon Sep 17 00:00:00 2001
 From: Janne Grunau <j@jannau.net>
 Date: Thu, 25 Dec 2025 18:50:32 +0100
 Subject: [PATCH 10/11] HACK: arm64: dts: apple: t60xx: j[34]1[46]: Mark
@@ -12,7 +12,7 @@ Signed-off-by: Janne Grunau <j@jannau.net>
  1 file changed, 4 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi b/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
-index cb91fdf616d3..9747d2cd29b9 100644
+index cb91fdf..9747d2c 100644
 --- a/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
 +++ b/arch/arm64/boot/dts/apple/t600x-j314-j316.dtsi
 @@ -309,6 +309,10 @@
@@ -27,5 +27,5 @@ index cb91fdf616d3..9747d2cd29b9 100644
  
  &i2c1 {
 -- 
-2.56.0
+2.56.1
 

@@ -1,4 +1,4 @@
-From 8c4637d61e0431482af5477a957a4709bef3d6a8 Mon Sep 17 00:00:00 2001
+From 4d0bb145f279c22ea10cb3ee729b9c0126521aba Mon Sep 17 00:00:00 2001
 From: Janne Grunau <j@jannau.net>
 Date: Sat, 3 Dec 2022 21:26:42 +0100
 Subject: [PATCH 03/11] arm64: dts: apple: t8103: Add dp-altmode dts hacks
@@ -16,7 +16,7 @@ Signed-off-by: Janne Grunau <j@jannau.net>
  1 file changed, 47 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/apple/t8103-jxxx.dtsi b/arch/arm64/boot/dts/apple/t8103-jxxx.dtsi
-index a3dc78c24b3c..bbc0e969e23b 100644
+index a3dc78c..bbc0e96 100644
 --- a/arch/arm64/boot/dts/apple/t8103-jxxx.dtsi
 +++ b/arch/arm64/boot/dts/apple/t8103-jxxx.dtsi
 @@ -9,15 +9,21 @@
@@ -97,5 +97,5 @@ index a3dc78c24b3c..bbc0e969e23b 100644
  &dwc3_0 {
  	ports {
 -- 
-2.56.0
+2.56.1
 
