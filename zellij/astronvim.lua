@@ -43,6 +43,17 @@ require("lazy").setup({
       update_notifications = true,
     },
   },
+  {
+    -- Mason has no clangd build for aarch64 Linux, so use the system one from
+    -- clang-tools-extra, which is on every architecture
+    "AstroNvim/astrolsp",
+    opts = function(_, opts)
+      if vim.fn.executable "clangd" == 1 then
+        opts.servers = opts.servers or {}
+        table.insert(opts.servers, "clangd")
+      end
+    end,
+  },
 } --[[@as LazySpec]], {
   -- The default, stdpath("config"), is the user's ~/.config/nvim. Creating it
   -- there would not stop this config loading, but keep the lockfile with the

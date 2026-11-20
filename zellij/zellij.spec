@@ -7,7 +7,7 @@
 
 Name:           zellij
 Version:        0.46.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -49,6 +49,8 @@ Recommends:     ripgrep
 Recommends:     fd-find
 Recommends:     tree-sitter-cli
 Recommends:     gcc
+# The C and C++ language server, which Mason cannot install on aarch64
+Recommends:     clang-tools-extra
 
 %description
 Zellij is a workspace aimed at developers, ops-oriented people and anyone who
@@ -123,6 +125,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %config(noreplace) %{_sysconfdir}/xdg/nvim/init.lua
 
 %changelog
+* Fri Nov 20 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-3
+- Set up the system clangd in the AstroNvim config, as Mason has no aarch64
+  build of it
+
 * Thu Nov 12 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-2
 - Build with reduced debug info, so the LTO link fits in memory on aarch64
 
