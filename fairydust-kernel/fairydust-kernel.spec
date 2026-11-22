@@ -213,7 +213,7 @@ Summary: Fedora Asahi Remix's kernel with DisplayPort over USB-C
 %global released_kernel 1
 # rpmfission: our build of Asahi's release; also tells the fairydust
 # kernels apart from Asahi's in "uname -r" (see fairydust_select below)
-%define buildid .fairydust
+%define buildid .fairydust.1
 %define specrpmversion 7.3.4
 %define specversion 7.3.4
 %define patchversion 7.3
@@ -2554,6 +2554,13 @@ BuildKernel() {
     mkdir -p $RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer
     %{make} ARCH=$Arch dtbs INSTALL_DTBS_PATH=$RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer
     %{make} ARCH=$Arch dtbs_install INSTALL_DTBS_PATH=$RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer
+    # rpmfission: keep only the Apple silicon device trees, the only ones
+    # m1n1 loads (update-m1n1 reads apple/t6*.dtb and apple/t81*.dtb). The
+    # other vendors' are ~95% of the dtbs, and every installed kernel gets a
+    # copy in /boot, which is 1G on Fedora Asahi Remix
+    find $RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer -mindepth 1 -maxdepth 1 \
+        ! -name apple -exec rm -rf {} +
+    test -d $RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer/apple
     cp -r $RPM_BUILD_ROOT/%{image_install_path}/dtb-$KernelVer $RPM_BUILD_ROOT/lib/modules/$KernelVer/dtb
     find arch/$Arch/boot/dts -name '*.dtb' -type f -delete
 %endif
@@ -5010,6 +5017,10 @@ exit 0
 #
 #
 %changelog
+* Sun Nov 22 2026 Martin Rixham <martin.rixham@gmail.com> [7.3.4-401.asahi.fairydust.1]
+- rpmfission: ship only the Apple silicon device trees, so each kernel takes
+  ~70MB of /boot instead of ~180MB
+
 * Fri Nov 20 2026 Martin Rixham <martin.rixham@gmail.com> [7.3.4-401.asahi.fairydust]
 - rpmfission: DisplayPort alt mode on USB-C from Asahi's fairydust branch
   (asahi-7.3.4-1..889c6aaba3c7); 16K kernel only
