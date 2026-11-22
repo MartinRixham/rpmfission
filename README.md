@@ -42,6 +42,7 @@ which Fedora builds for x86_64 only.
 | [fairydust-kernel](fairydust-kernel/fairydust-kernel.spec) (Asahi's `kernel-16k`, with DisplayPort over USB-C) | https://github.com/AsahiLinux/linux |
 | [ffmpeg](ffmpeg/ffmpeg.spec) (Fedora 45 and later) | https://ffmpeg.org/ |
 | [ffmpeg8](ffmpeg8/ffmpeg8.spec) (`ffmpeg` 8 for Fedora 44) | https://ffmpeg.org/ |
+| [gmail-mailto](gmail-mailto/gmail-mailto.spec) (Gmail as the mail app for `mailto:` links) | (this repository) |
 | [gstreamer1-plugins-bad-free](gstreamer1-plugins-bad-free/gstreamer1-plugins-bad-free.spec) (Fedora's, with a fix) | https://gstreamer.freedesktop.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
 | [mesa](mesa/mesa.spec) (Fedora's, with a fix; [mesa-fedora44](mesa-fedora44/mesa-fedora44.spec) for Fedora 44) | https://mesa3d.org/ |

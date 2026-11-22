@@ -1,0 +1,15 @@
+#!/bin/sh
+# Opens a mailto: link in Gmail's compose window, in the default browser.
+# Gmail reads the whole link from its url parameter, so the link is encoded
+# for a query string: a subject or body with & or spaces then survives.
+
+if [ $# -eq 0 ]; then
+    exec xdg-open "https://mail.google.com/mail/?view=cm"
+fi
+
+url=$(python3 -I -c '
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=""))
+' "$1") || exit 1
+
+exec xdg-open "https://mail.google.com/mail/?extsrc=mailto&url=$url"
