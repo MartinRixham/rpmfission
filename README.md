@@ -36,6 +36,7 @@ which Fedora builds for x86_64 only.
 
 | Package | Upstream |
 | ------- | -------- |
+| [astronvim](astronvim/astronvim.spec) (AstroNvim as the system-wide Neovim config) | https://astronvim.com |
 | [avd-fw-freeworld](avd-fw-freeworld/avd-fw-freeworld.spec) | https://github.com/AsahiLinux/avd-fw |
 | [bijiben](bijiben/bijiben.spec) | https://gitlab.gnome.org/MartinRixham/bijiben |
 | [droid-sans-mono-nerd-fonts](droid-sans-mono-nerd-fonts/droid-sans-mono-nerd-fonts.spec) | https://github.com/ryanoasis/nerd-fonts |
