@@ -7,7 +7,7 @@
 
 Name:           zellij
 Version:        0.46.0
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -20,6 +20,8 @@ Source0:        https://github.com/zellij-org/zellij/archive/v%{version}/%{name}
 Source1:        %{name}-%{version}-vendor.tar.xz
 # Launches zellij in foot, replacing upstream's Terminal=true entry
 Source2:        zellij.desktop
+# System-wide config, for users who have no ~/.config/zellij
+Source3:        zellij-config.kdl
 # The logo is taller than wide and has no viewBox, so icon renderers that
 # scale it to a square squash the hexagon. Make the canvas square with the
 # hexagon centred.
@@ -90,6 +92,7 @@ install -Dpm 0644 completion.fish %{buildroot}%{fish_completions_dir}/zellij.fis
 install -Dpm 0644 completion.zsh %{buildroot}%{zsh_completions_dir}/_zellij
 install -Dpm 0644 assets/logo.svg %{buildroot}%{_datadir}/icons/hicolor/scalable/apps/zellij.svg
 desktop-file-install --dir=%{buildroot}%{_datadir}/applications %{SOURCE2}
+install -Dpm 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/zellij/config.kdl
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
@@ -104,8 +107,15 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %{zsh_completions_dir}/_zellij
 %{_datadir}/applications/zellij.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zellij.svg
+%dir %{_sysconfdir}/zellij
+%config(noreplace) %{_sysconfdir}/zellij/config.kdl
 
 %changelog
+* Mon Nov 23 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-5
+- Install a system-wide config that draws full pane frames, as before 0.46,
+  does not stack panes on resize, and enters move mode with Ctrl m instead
+  of Ctrl h
+
 * Sun Nov 22 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-4
 - Move the AstroNvim config to its own package, astronvim
 

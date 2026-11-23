@@ -1,0 +1,13 @@
+pane_frame_style "full"
+
+stacked_pane_list false
+
+keybinds {
+    unbind "Ctrl h"
+    move {
+        bind "Ctrl m" { SwitchToMode "normal"; }
+    }
+    shared_except "move" "locked" {
+        bind "Ctrl m" { SwitchToMode "move"; }
+    }
+}
