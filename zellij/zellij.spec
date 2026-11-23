@@ -7,7 +7,7 @@
 
 Name:           zellij
 Version:        0.46.0
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Terminal workspace with batteries included
 
 # Zellij itself is MIT. The rest covers the bundled crates, as printed by
@@ -20,12 +20,17 @@ Source0:        https://github.com/zellij-org/zellij/archive/v%{version}/%{name}
 Source1:        %{name}-%{version}-vendor.tar.xz
 # Launches zellij in foot, replacing upstream's Terminal=true entry
 Source2:        zellij.desktop
-# System-wide config, for users who have no ~/.config/zellij
+# System-wide config, for users who have no config of their own
 Source3:        zellij-config.kdl
 # The logo is taller than wide and has no viewBox, so icon renderers that
 # scale it to a square squash the hexagon. Make the canvas square with the
 # hexagon centred.
 Patch0:         zellij-logo-viewbox.patch
+# On first start zellij creates ~/.config/zellij before loading the config,
+# so it never reads /etc/zellij/config.kdl and writes the built-in defaults
+# out as the user's new config. Load the system-wide config when the user has
+# no config file yet, so the session uses it and the written file holds it.
+Patch1:         zellij-system-config-fallback.patch
 
 ExclusiveArch:  %{rust_arches}
 
@@ -111,6 +116,10 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/zellij.desktop
 %config(noreplace) %{_sysconfdir}/zellij/config.kdl
 
 %changelog
+* Mon Nov 23 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-6
+- Load the system-wide config when the user has no config file yet, so the
+  config written on first start holds its values instead of the defaults
+
 * Mon Nov 23 2026 Martin Rixham <martin.rixham@gmail.com> - 0.46.0-5
 - Install a system-wide config that draws full pane frames, as before 0.46,
   does not stack panes on resize, and enters move mode with Ctrl m instead

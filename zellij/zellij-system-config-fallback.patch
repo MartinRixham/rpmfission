@@ -1,0 +1,49 @@
+--- a/zellij-utils/src/input/cli_assets.rs
++++ b/zellij-utils/src/input/cli_assets.rs
+@@ -86,8 +86,16 @@ impl CliAssets {
+             if self.should_ignore_config {
+                 Config::from_default_assets().unwrap_or_else(|_| Default::default())
+             } else if let Some(ref path) = self.config_file_path {
+-                let default_config =
+-                    Config::from_default_assets().unwrap_or_else(|_| Default::default());
++                let default_config = if path.exists() {
++                    Config::from_default_assets().unwrap_or_else(|_| Default::default())
++                } else {
++                    // No config of the user's own yet: start from the
++                    // system-wide one, which is also what gets written out
++                    // as their new config file
++                    Config::from_system_config_or_default_assets()
++                        .or_else(|_| Config::from_default_assets())
++                        .unwrap_or_else(|_| Default::default())
++                };
+                 Config::from_path(path, Some(default_config.clone()))
+                     .unwrap_or_else(|_| default_config)
+             } else {
+--- a/zellij-utils/src/input/config.rs
++++ b/zellij-utils/src/input/config.rs
+@@ -263,10 +263,23 @@ impl Config {
+                 let default_config = Config::from_default_assets()?;
+                 Config::from_path(&path, Some(default_config))
+             } else {
+-                Config::from_default_assets()
++                Config::from_system_config_or_default_assets()
+             }
+         } else {
+-            Config::from_default_assets()
++            Config::from_system_config_or_default_assets()
++        }
++    }
++    /// The default assets layered with the system-wide config
++    /// (`/etc/zellij/config.kdl`) if there is one. Used when the user has no
++    /// config file of their own, so that the config zellij writes for them
++    /// holds the values it actually loaded rather than the bare defaults.
++    pub fn from_system_config_or_default_assets() -> ConfigResult {
++        let default_config = Config::from_default_assets()?;
++        let path = crate::consts::system_default_config_dir().join(DEFAULT_CONFIG_FILE_NAME);
++        if path.exists() {
++            Config::from_path(&path, Some(default_config))
++        } else {
++            Ok(default_config)
+         }
+     }
+ }
