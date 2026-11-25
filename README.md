@@ -46,6 +46,7 @@ which Fedora builds for x86_64 only.
 | [gmail-mailto](gmail-mailto/gmail-mailto.spec) (Gmail as the mail app for `mailto:` links) | (this repository) |
 | [gstreamer1-plugins-bad-free](gstreamer1-plugins-bad-free/gstreamer1-plugins-bad-free.spec) (Fedora's, with a fix) | https://gstreamer.freedesktop.org/ |
 | [intel-media-driver](intel-media-driver/intel-media-driver.spec) | https://github.com/intel/media-driver |
+| [mdhero](mdhero/mdhero.spec) (Markdown viewer and editor; dnf updates it, so its own update check is dropped) | https://github.com/vaibhav-kakde-in/mdhero |
 | [mesa](mesa/mesa.spec) (Fedora's, with a fix; [mesa-fedora44](mesa-fedora44/mesa-fedora44.spec) for Fedora 44) | https://mesa3d.org/ |
 | [mesa-freeworld](mesa-freeworld/mesa-freeworld.spec) | https://mesa3d.org/ |
 | [mozilla-vpn](mozilla-vpn/mozilla-vpn.spec) | https://github.com/mozilla-mobile/mozilla-vpn-client |
@@ -217,8 +218,9 @@ without changes:
   builds for, such as `< 45`. A package can so have a spec per range of
   releases, as `ffmpeg` and `ffmpeg8` do. A malformed line fails the build.
 - `<name>/sources.sh`: an optional hook that generates sources that cannot be
-  downloaded, such as vendored Rust crates. It runs in a directory that already
-  holds the spec's downloaded sources.
+  downloaded, such as vendored Rust crates or node_modules. It runs in a
+  directory that already holds the spec's downloaded sources, with `cargo` and
+  `pnpm` available.
 - `.copr/Makefile`: the entry point for COPR's **make_srpm** source method.
   It calls `.copr/srpm.sh`, which downloads sources with `spectool`, checks
   them against `sources`, runs the hook and builds the SRPM.

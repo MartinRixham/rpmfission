@@ -1,0 +1,53 @@
+diff -ruN a/src/lib/stores/updater.ts b/src/lib/stores/updater.ts
+--- a/src/lib/stores/updater.ts
++++ b/src/lib/stores/updater.ts
+@@ -84,6 +84,9 @@
+  * @param force - when true, bypass the 24h throttle (used by "Check for updates…" menu)
+  */
+ export async function checkForUpdates(force = false): Promise<void> {
++  // Updates come from the distribution's package manager, so neither ask
++  // mdhero.app or GitHub for a newer release nor offer to install one.
++  return;
+   if (import.meta.env.DEV && !force) return;
+ 
+   if (!force) {
+diff -ruN a/src-tauri/capabilities/desktop.json b/src-tauri/capabilities/desktop.json
+--- a/src-tauri/capabilities/desktop.json
++++ b/src-tauri/capabilities/desktop.json
+@@ -9,7 +9,6 @@
+     "main"
+   ],
+   "permissions": [
+-    "updater:default",
+     "process:default"
+   ]
+ }
+\ No newline at end of file
+diff -ruN a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
+--- a/src-tauri/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -70,7 +70,6 @@
+     tauri::Builder::default()
+         .plugin(tauri_plugin_window_state::Builder::default().build())
+         .plugin(tauri_plugin_process::init())
+-        .plugin(tauri_plugin_updater::Builder::new().build())
+         .plugin(tauri_plugin_opener::init())
+         .plugin(tauri_plugin_dialog::init())
+         .plugin(tauri_plugin_cli::init())
+diff -ruN a/src-tauri/src/menu.rs b/src-tauri/src/menu.rs
+--- a/src-tauri/src/menu.rs
++++ b/src-tauri/src/menu.rs
+@@ -11,13 +11,6 @@
+         true,
+         &[
+             &MenuItem::with_id(app, "about", "About MDHero", true, None::<&str>)?,
+-            &MenuItem::with_id(
+-                app,
+-                "check_updates",
+-                "Check for Updates…",
+-                true,
+-                None::<&str>,
+-            )?,
+             &PredefinedMenuItem::separator(app)?,
+             &PredefinedMenuItem::hide(app, None)?,
+             &PredefinedMenuItem::hide_others(app, None)?,

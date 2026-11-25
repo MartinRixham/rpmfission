@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MDHero
+GenericName=Markdown Viewer
+Comment=View and edit Markdown documents
+Exec=mdhero %f
+Icon=mdhero
+Terminal=false
+Categories=Office;Viewer;
+MimeType=text/markdown;
+Keywords=markdown;md;viewer;editor;
