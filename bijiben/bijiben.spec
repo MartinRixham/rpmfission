@@ -5,6 +5,8 @@
 # The tarball is made from the release tag by sources.sh, since gitlab.gnome.org
 # refuses archive downloads from spectool. Update both of these with Version;
 # sources.sh reads them with sed, so keep them literal.
+#
+# rpmfission-srpm-requires: git-core
 %global tag     BIJIBEN_41_1
 %global commit  781ac8c93c2f223fc70eef036581e4d5816aa311
 

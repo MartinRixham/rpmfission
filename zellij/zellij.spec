@@ -1,5 +1,7 @@
 # Rust dependencies are vendored (see sources.sh), so the build runs offline
 # as it would in COPR or mock.
+#
+# rpmfission-srpm-requires: cargo
 
 # Full debug info makes the fat LTO link of the zellij binary run out of
 # memory on the 15 GiB aarch64 runners; line tables only is enough.

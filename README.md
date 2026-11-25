@@ -219,11 +219,16 @@ without changes:
   releases, as `ffmpeg` and `ffmpeg8` do. A malformed line fails the build.
 - `<name>/sources.sh`: an optional hook that generates sources that cannot be
   downloaded, such as vendored Rust crates or node_modules. It runs in a
-  directory that already holds the spec's downloaded sources, with `cargo` and
-  `pnpm` available.
+  directory that already holds the spec's downloaded sources.
+- `# rpmfission-srpm-requires: <package>...`: spec comments naming the
+  packages the hook needs, such as `cargo`, `git-core` or `pnpm`. Only
+  `rpmdevtools` and `rpm-build` are installed for every package; the SRPM
+  build installs these as well, where they are missing. A malformed line fails
+  the build.
 - `.copr/Makefile`: the entry point for COPR's **make_srpm** source method.
-  It calls `.copr/srpm.sh`, which downloads sources with `spectool`, checks
-  them against `sources`, runs the hook and builds the SRPM.
+  It calls `.copr/srpm.sh`, which installs the spec's
+  `rpmfission-srpm-requires`, downloads sources with `spectool`, checks them
+  against `sources`, runs the hook and builds the SRPM.
 
 CI does what COPR does: it builds the SRPM through `.copr/Makefile`, then
 rebuilds it with `mock` in the `fedora-<release>-<arch>` chroot, on a GitHub

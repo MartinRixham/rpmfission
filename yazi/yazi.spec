@@ -1,5 +1,7 @@
 # Rust dependencies are vendored (see sources.sh), so the build runs offline
 # as it would in COPR or mock.
+#
+# rpmfission-srpm-requires: cargo
 
 Name:           yazi
 Version:        26.9.1

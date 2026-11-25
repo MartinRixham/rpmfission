@@ -6,6 +6,8 @@
 # or mock. The Go netfilter library builds against Fedora's Go packages, but
 # for nftables, which Fedora does not package: use the version in
 # linux/netfilter/go.mod.
+#
+# rpmfission-srpm-requires: cargo git-core
 %global boringtun_commit 9a60fd21f4455b657cd27a63a491613e1bae36af
 %global wgtools_commit   139aac59a5ab7da913d4b6dd62692fa90e2ccad4
 %global i18n_commit      9cf4001dea46348453fc95971e37e6e3797c1501

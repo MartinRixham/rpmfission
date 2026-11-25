@@ -18,6 +18,28 @@ spec=$(realpath "$1")
 outdir=$(realpath -m "$2")
 pkgdir=$(dirname "$spec")
 
+# "# rpmfission-srpm-requires: <package>..." lines name what the package's
+# sources.sh needs, such as cargo or pnpm. Those not installed are installed
+# here, so that the shared SRPM environment carries no package's tools.
+re='^#[[:space:]]*rpmfission-srpm-requires:([[:space:]]+[A-Za-z0-9._+-]+)+[[:space:]]*$'
+if bad=$(grep -E '^#[[:space:]]*rpmfission-srpm-requires:' "$spec" | grep -vE "$re"); then
+    echo "$spec: malformed line: $bad" >&2
+    exit 1
+fi
+missing=()
+for dep in $(sed -nE 's/^#[[:space:]]*rpmfission-srpm-requires://p' "$spec"); do
+    rpm -q --whatprovides "$dep" > /dev/null 2>&1 || missing+=("$dep")
+done
+# Retried, as Fedora's mirrors sometimes time out
+if [ ${#missing[@]} -gt 0 ]; then
+    for delay in 30 90 0; do
+        dnf -y install "${missing[@]}" && break
+        [ "$delay" -gt 0 ] || exit 1
+        echo "dnf install failed; retrying in $delay seconds" >&2
+        sleep "$delay"
+    done
+fi
+
 mkdir -p "$outdir"
 sourcedir=$(mktemp -d)
 trap 'rm -rf "$sourcedir"' EXIT

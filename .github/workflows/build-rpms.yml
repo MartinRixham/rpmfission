@@ -33,12 +33,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # git for sources.sh hooks that clone upstream, such as bijiben's
+      # A package's sources.sh tools (cargo, git, pnpm) are installed by
+      # .copr/srpm.sh from its spec's rpmfission-srpm-requires lines.
       # Retried, as Fedora's mirrors sometimes time out
       - name: Install build tools
         run: |
           for delay in 30 90 0; do
-            dnf -y install mock rpmdevtools rpm-build cargo make createrepo_c git-core && exit 0
+            dnf -y install mock rpmdevtools rpm-build make createrepo_c && exit 0
             [ $delay -gt 0 ] || exit 1
             echo "::warning::dnf install failed; retrying in $delay seconds"
             sleep $delay
