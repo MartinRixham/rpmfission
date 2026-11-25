@@ -16,7 +16,7 @@
 
 Name:           %{pypi_name}
 Version:        1.5.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Python bindings for whisper.cpp, accelerated with Vulkan
 
 License:        MIT
@@ -95,5 +95,8 @@ rm %{buildroot}%{_bindir}/pwcpp-{assistant,gui,livestream,recording}
 %{_bindir}/pwcpp
 
 %changelog
+* Wed Nov 25 2026 Martin Rixham <martin.rixham@gmail.com> - 1.5.1-2
+- Rebuild for whisper 1.9.6, whose ggml libraries have soname 1
+
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 1.5.1-1
 - Initial package

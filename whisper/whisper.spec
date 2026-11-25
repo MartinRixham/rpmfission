@@ -23,7 +23,7 @@
 %global __requires_exclude ^lib(whisper|parakeet|ggml|ggml-base)\\.so.*$
 
 Name:           whisper
-Version:        1.9.5
+Version:        1.9.6
 Release:        1%{?dist}
 Summary:        Speech recognition with OpenAI's Whisper models, accelerated with Vulkan
 
@@ -131,8 +131,8 @@ ls %{buildroot}%{libdir_private}/libggml-vulkan.so
 %dir %{libdir_private}
 %{libdir_private}/libwhisper.so.1*
 %{libdir_private}/libparakeet.so.*
-%{libdir_private}/libggml.so.0*
-%{libdir_private}/libggml-base.so.0*
+%{libdir_private}/libggml.so.1*
+%{libdir_private}/libggml-base.so.1*
 # The backends are loaded with dlopen and so have no soname
 %{libdir_private}/libggml-cpu-*.so
 %{libdir_private}/libggml-vulkan.so
@@ -147,5 +147,8 @@ ls %{buildroot}%{libdir_private}/libggml-vulkan.so
 %{libdir_private}/pkgconfig/
 
 %changelog
+* Wed Nov 25 2026 Martin Rixham <martin.rixham@gmail.com> - 1.9.6-1
+- Update to 1.9.6, whose ggml libraries have soname 1
+
 * Mon Nov 16 2026 Martin Rixham <martin.rixham@gmail.com> - 1.9.5-1
 - Initial package
