@@ -17,7 +17,7 @@
 # rpmfission-fedora: < 45
 #
 # rpmfission-fedora-patches: ffmpeg
-# Fedora's patches not carried here (see .github/scripts/check-fedora-patches.sh):
+# Fedora's patches not carried here (see update/check-fedora-patches.sh):
 # codec-choice is for Fedora's reduced codec set; DeckLink is disabled here;
 # the streamcopy timestamp fix is for builds without the native H.264 and HEVC
 # decoders.

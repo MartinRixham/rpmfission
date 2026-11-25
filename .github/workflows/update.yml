@@ -1,11 +1,11 @@
 name: Check upstream releases
 
 # Keeps an issue open for each package whose upstream GitHub repository has a
-# newer release (see .github/scripts/check-updates.sh), for each package
+# newer release (see update/check-updates.sh), for each package
 # whose patches differ from those of the Fedora package it takes them from
-# (see .github/scripts/check-fedora-patches.sh), and for each package whose
+# (see update/check-fedora-patches.sh), and for each package whose
 # published RPMs have dependencies Fedora no longer meets (see
-# .github/scripts/check-repoclosure.sh). The run fails while any such
+# update/check-repoclosure.sh). The run fails while any such
 # problem remains.
 
 on:
@@ -35,7 +35,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: .github/scripts/check-updates.sh
+        run: update/check-updates.sh
 
       # Even if a package is out of date
       - name: Compare patches with Fedora's
@@ -43,7 +43,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: .github/scripts/check-fedora-patches.sh
+        run: update/check-fedora-patches.sh
 
       # Even if an earlier check failed
       - name: Check the published RPMs' dependencies
@@ -52,4 +52,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           REPO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-        run: .github/scripts/check-repoclosure.sh
+        run: update/check-repoclosure.sh

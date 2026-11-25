@@ -114,7 +114,7 @@ for pkg in $broken_pkgs; do
         echo
         echo "This usually means Fedora has updated something the package was built against, such as a library with a new soname or a package required at an exact version. Rebuild the package by bumping \`Release\` with a changelog entry, or update it to Fedora's new version if it follows Fedora."
         echo
-        echo "This issue closes itself once the published RPMs install again. See \`.github/scripts/check-repoclosure.sh\`."
+        echo "This issue closes itself once the published RPMs install again. See \`update/check-repoclosure.sh\`."
     )
     issue=$(gh issue list --state open --search "in:title \"$title\"" --json number,title \
         --jq "map(select(.title == \"$title\")) | .[0].number // empty")

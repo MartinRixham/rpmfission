@@ -130,7 +130,7 @@ body=$(cat <<EOF
 - [ ] \`License:\` matches \`%cargo_license_summary\` in the build log
 
 This issue closes itself once the spec is up to date. See
-\`.github/scripts/check-updates.sh\`.
+\`update/check-updates.sh\`.
 EOF
 )
 if [ -n "$issue" ]; then

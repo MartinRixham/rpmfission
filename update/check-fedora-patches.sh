@@ -109,7 +109,7 @@ for spec in */*.spec; do
                 sed 's/^/- `/; s/$/`/' <<< "$extra"
                 echo
             fi
-            echo "Carry the patch, or list it on a \`# rpmfission-fedora-patches-ignore:\` line in the spec with the reason. This issue closes itself once the patches match. See \`.github/scripts/check-fedora-patches.sh\`."
+            echo "Carry the patch, or list it on a \`# rpmfission-fedora-patches-ignore:\` line in the spec with the reason. This issue closes itself once the patches match. See \`update/check-fedora-patches.sh\`."
         )
         if [ -n "$issue" ]; then
             gh issue edit "$issue" --body "$body" > /dev/null

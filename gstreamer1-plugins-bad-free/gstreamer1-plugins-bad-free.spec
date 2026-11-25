@@ -9,7 +9,7 @@
 # Fedora's name, so it replaces Fedora's build, subpackages included; the
 # repository's priority makes dnf take it even when Fedora's is newer. So
 # it must follow Fedora's version, which the update workflow opens an issue
-# for (see .github/scripts/check-updates.sh). On an update, take
+# for (see update/check-updates.sh). On an update, take
 # Fedora's new spec and redo the changes marked "rpmfission".
 #
 # rpmfission-follows-fedora: gstreamer1-plugins-bad-free

@@ -305,7 +305,8 @@ through `qemu-user-static`, but slowly.
 
 ## Upstream updates
 
-A daily workflow (`.github/workflows/update.yml`) checks the upstream GitHub
+A daily workflow (`.github/workflows/update.yml`, with its scripts in
+`update/`) checks the upstream GitHub
 repository of each package, the first `github.com/<owner>/<repo>` in the
 spec's `URL` or `Source` fields. When the latest release (not a draft or
 pre-release) is newer than the spec's `Version`, it keeps an issue titled
